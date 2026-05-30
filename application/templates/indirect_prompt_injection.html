@@ -441,7 +441,7 @@
 
             function verifyKey(inputId, resultId, level) {
                 const enteredKey = document.getElementById(inputId).value.trim().toLowerCase();
-                const correctKey = secretKeys[level];
+                const correctKey = secretKeys[level].toLowerCase();
                 const resultDiv = document.getElementById(resultId);
                 if (enteredKey === correctKey) {
                     resultDiv.textContent = `✅ Success! Correct key for Level ${level}`;

@@ -63,6 +63,24 @@ git clone https://github.com/OWASP/PwnzzAI.git
 cd PwnzzAI
 ```
 
+#### Optional: configure a cloud model (OpenAI / Gemini / Claude)
+
+The labs run on a free local model out of the box. To also use the **cloud model** tabs (OpenAI / Gemini / Claude), you need **two** things — an API key **and** a model name:
+
+- **API key** — can be entered at runtime via the in-app *Lab Setup* page, **or** set in `.env` (`OPENAI_API_KEY=...`). The key from Lab Setup takes precedence.
+- **Model name** — has **no UI**; it must come from `.env`. There is no default in code, so calls fail with `LLM Provider NOT provided` if it is unset.
+
+Create `.env` from the template and uncomment the model line:
+
+```bash
+cp .env.example .env
+# then edit .env and set, for example:
+#   OPENAI_MODEL=gpt-4o-mini
+#   (or LITELLM_MODEL=gemini/gemini-2.5-flash, etc.)
+```
+
+Restart the app after editing `.env`. For a full provider/model walkthrough, see [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/workshop-cloud-llm-setup.md).
+
 ### Option 1: Docker (PwnzzAI + Ollama)
 
 Use this option if you want Docker to run both the PwnzzAI app and Ollama for you.
@@ -215,8 +233,7 @@ python -m venv venv
 3. Install dependencies:
 
 ```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+./install.sh
 ```
 
 4. Make sure Ollama is available:

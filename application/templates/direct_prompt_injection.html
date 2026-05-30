@@ -184,18 +184,7 @@
                         <!-- OpenAI Tab Content -->
                         <div class="tab-content" id="openai-model-tab">
                         <div class="model-implementation-section">
-                        <!-- <div class="form-group">
-                            <label for="dpi-mode-openai">Lab mode:</label>
-                            <select id="dpi-mode-openai" class="form-control">
-                                <option value="baseline">Baseline — classic five difficulty levels</option>
-                                <option value="escalation">Guardrail ladder — common defenses B0–B9 and how each one is bypassed</option>
-                            </select>
-                            <p class="help-text" id="dpi-ladder-help-openai" style="display:none;"><small>
-                                The <strong>Guardrail ladder</strong> runs the same prompt-injection technique against ten
-                                progressively more sophisticated production-style defenses. Each level explains the guardrail
-                                in play, why a real team would ship it, and why it still fails.
-                            </small></p>
-                        </div> -->
+                        {% if dpi_mode != 'escalation' %}
                         <div class="form-group" id="dpi-baseline-wrap-openai">
                             <label for="dpi-level-openai">Injection level:</label>
                             <select id="dpi-level-openai" class="form-control">
@@ -206,7 +195,8 @@
                                 <option value="5">Level 5 – It is impossible to trick me! </option>
                             </select>
                         </div>
-                        <div class="form-group" id="dpi-escalation-wrap-openai" style="display:none;">
+                        {% else %}
+                        <div class="form-group" id="dpi-escalation-wrap-openai">
                             <label for="dpi-escalation-stage-openai">
                                 Guardrail level:
                                 <span class="dpi-hint-trigger" id="dpi-hint-trigger-openai" tabindex="0" role="button" aria-label="Show guardrail hint">
@@ -216,6 +206,7 @@
                             </label>
                             <select id="dpi-escalation-stage-openai" class="form-control"></select>
                         </div>
+                        {% endif %}
                             <!-- OpenAI Status Section -->
                             <div class="token-section openai-token-section">
                                 <h3>{{ llm_ui.provider_name }} API status</h3>
@@ -288,6 +279,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const LLM_UI_DEFAULT = {{ llm_ui | tojson }};
+            const DPI_MODE = {{ dpi_mode|tojson }};
             let escalationStagesCache = [];
 
             /** Per-stage chat when lab mode is Escalation (B0–B9); baseline uses a single transcript. */
@@ -360,25 +352,27 @@
             }
 
             function updateOllamaPersistTargetFromUi() {
-                const mode = document.getElementById('dpi-mode-ollama').value;
-                lastOllamaPersistTarget =
-                    mode === 'baseline'
-                        ? 'baseline'
-                        : parseInt(document.getElementById('dpi-escalation-stage-ollama').value, 10) || 0;
+                if (DPI_MODE === 'baseline') {
+                    lastOllamaPersistTarget = 'baseline';
+                } else {
+                    const sel = document.getElementById('dpi-escalation-stage-ollama');
+                    lastOllamaPersistTarget = parseInt(sel ? sel.value : 0, 10) || 0;
+                }
             }
 
             function updateOpenaiPersistTargetFromUi() {
-                const mode = document.getElementById('dpi-mode-openai').value;
-                lastOpenaiPersistTarget =
-                    mode === 'baseline'
-                        ? 'baseline'
-                        : parseInt(document.getElementById('dpi-escalation-stage-openai').value, 10) || 0;
+                if (DPI_MODE === 'baseline') {
+                    lastOpenaiPersistTarget = 'baseline';
+                } else {
+                    const sel = document.getElementById('dpi-escalation-stage-openai');
+                    lastOpenaiPersistTarget = parseInt(sel ? sel.value : 0, 10) || 0;
+                }
             }
 
             function showOllamaChatForCurrentSettings() {
                 const el = document.getElementById('chat-messages');
                 if (!el) return;
-                const mode = document.getElementById('dpi-mode-ollama').value;
+                const mode = DPI_MODE;
                 if (mode === 'baseline') {
                     renderStoredMessages(el, ollamaBaselineMsgs, false);
                 } else {
@@ -396,7 +390,7 @@
             function showOpenaiChatForCurrentSettings(uiProviderName) {
                 const el = document.getElementById('openai-chat-messages');
                 if (!el) return;
-                const mode = document.getElementById('dpi-mode-openai').value;
+                const mode = DPI_MODE;
                 const welcomeCloud =
                     "Hi, I'm your pizza assistant, powered by " +
                     (uiProviderName || LLM_UI_DEFAULT.provider_name) +
@@ -459,32 +453,10 @@
                 panelEl.innerHTML = heading + blocks.join('');
             }
 
-            function wireEscalationMode(modeSelect, baselineWrap, escWrap, panelEl, stageSelect, provider, helpEl) {
-                const trigger = panelEl.closest('.dpi-hint-trigger');
-                function sync() {
-                    if (provider === 'ollama') {
-                        persistOllamaDomSnapshot();
-                    } else {
-                        persistOpenaiDomSnapshot();
-                    }
-                    const esc = modeSelect.value === 'escalation';
-                    baselineWrap.style.display = esc ? 'none' : 'block';
-                    escWrap.style.display = esc ? 'block' : 'none';
-                    if (trigger) trigger.style.display = esc ? 'inline-block' : 'none';
-                    if (helpEl) helpEl.style.display = esc ? 'block' : 'none';
-                    if (provider === 'ollama') {
-                        showOllamaChatForCurrentSettings();
-                    } else {
-                        showOpenaiChatForCurrentSettings();
-                    }
-                    if (esc) {
-                        const st = parseInt(stageSelect.value, 10) || 0;
-                        renderDefensePanel(panelEl, st);
-                    }
-                }
-                modeSelect.addEventListener('change', sync);
+            function wireStageSelect(stageSelect, panelEl, provider) {
+                if (!stageSelect || !panelEl) return;
+                renderDefensePanel(panelEl, parseInt(stageSelect.value, 10) || 0);
                 stageSelect.addEventListener('change', () => {
-                    if (modeSelect.value !== 'escalation') return;
                     if (provider === 'ollama') {
                         persistOllamaDomSnapshot();
                         showOllamaChatForCurrentSettings();
@@ -494,112 +466,40 @@
                     }
                     renderDefensePanel(panelEl, parseInt(stageSelect.value, 10) || 0);
                 });
-                sync();
             }
 
-            fetch('/api/lab/direct-prompt-escalation/stages')
-                .then((r) => r.json())
-                .then((data) => {
-                    escalationStagesCache = data.stages || [];
-                    const so = document.getElementById('dpi-escalation-stage-ollama');
-                    const sc = document.getElementById('dpi-escalation-stage-openai');
-                    populateEscalationSelect(so);
-                    populateEscalationSelect(sc);
-                    wireEscalationMode(
-                        document.getElementById('dpi-mode-ollama'),
-                        document.getElementById('dpi-baseline-wrap-ollama'),
-                        document.getElementById('dpi-escalation-wrap-ollama'),
-                        document.getElementById('dpi-defense-panel-ollama'),
-                        so,
-                        'ollama',
-                        document.getElementById('dpi-ladder-help-ollama')
-                    );
-                    wireEscalationMode(
-                        document.getElementById('dpi-mode-openai'),
-                        document.getElementById('dpi-baseline-wrap-openai'),
-                        document.getElementById('dpi-escalation-wrap-openai'),
-                        document.getElementById('dpi-defense-panel-openai'),
-                        sc,
-                        'openai',
-                        document.getElementById('dpi-ladder-help-openai')
-                    );
-                    function applyDpiHashFromLocation() {
-                        const raw = (location.hash || '#baseline').toLowerCase();
-                        const useEscalation = raw === '#guardrail-ladder' || raw === '#escalation';
-                        const modeVal = useEscalation ? 'escalation' : 'baseline';
-                        const mo = document.getElementById('dpi-mode-ollama');
-                        const mc = document.getElementById('dpi-mode-openai');
-                        if (!mo || !mc) return;
-                        if (mo.value !== modeVal) mo.value = modeVal;
-                        if (mc.value !== modeVal) mc.value = modeVal;
-                        mo.dispatchEvent(new Event('change'));
-                        mc.dispatchEvent(new Event('change'));
-                        if (location.hash && location.hash.length > 1) {
-                            const anchor = document.getElementById('dpi-lab');
-                            if (anchor) {
-                                requestAnimationFrame(() => {
-                                    anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                });
-                            }
-                        }
-                        if (window.pwnzzSyncDpiNavActive) {
-                            window.pwnzzSyncDpiNavActive();
-                        }
-                    }
-                    function attachDpiModeHashListeners() {
-                        const mo = document.getElementById('dpi-mode-ollama');
-                        const mc = document.getElementById('dpi-mode-openai');
-                        function updateHashAndNav(v) {
-                            const cur = (location.hash || '').toLowerCase();
-                            if (v === 'escalation') {
-                                if (cur !== '#guardrail-ladder' && cur !== '#escalation') {
-                                    history.replaceState(null, '', '#guardrail-ladder');
-                                }
-                            } else if (cur === '#guardrail-ladder' || cur === '#escalation') {
-                                history.replaceState(null, '', '#baseline');
-                            }
-                            if (window.pwnzzSyncDpiNavActive) {
-                                window.pwnzzSyncDpiNavActive();
-                            }
-                        }
-                        mo.addEventListener('change', function () {
-                            const v = mo.value;
-                            if (mc.value !== v) {
-                                mc.value = v;
-                                mc.dispatchEvent(new Event('change'));
-                            } else {
-                                updateHashAndNav(v);
-                            }
-                        });
-                        mc.addEventListener('change', function () {
-                            const v = mc.value;
-                            if (mo.value !== v) {
-                                mo.value = v;
-                                mo.dispatchEvent(new Event('change'));
-                            } else {
-                                updateHashAndNav(v);
-                            }
-                        });
-                    }
-                    applyDpiHashFromLocation();
-                    attachDpiModeHashListeners();
-                    window.addEventListener('hashchange', applyDpiHashFromLocation);
-                })
-                .catch(() => {});
+            if (DPI_MODE === 'escalation') {
+                fetch('/api/lab/direct-prompt-escalation/stages')
+                    .then((r) => r.json())
+                    .then((data) => {
+                        escalationStagesCache = data.stages || [];
+                        const so = document.getElementById('dpi-escalation-stage-ollama');
+                        const sc = document.getElementById('dpi-escalation-stage-openai');
+                        if (so) populateEscalationSelect(so);
+                        if (sc) populateEscalationSelect(sc);
+                        wireStageSelect(so, document.getElementById('dpi-defense-panel-ollama'), 'ollama');
+                        wireStageSelect(sc, document.getElementById('dpi-defense-panel-openai'), 'openai');
+                        showOllamaChatForCurrentSettings();
+                        showOpenaiChatForCurrentSettings();
+                    })
+                    .catch(() => {});
+            }
 
             const dpiLevelSelector = document.getElementById('dpi-level');
-            let selectedDpiLevel = dpiLevelSelector.value;
-
-            dpiLevelSelector.addEventListener('change', () => {
-                selectedDpiLevel = dpiLevelSelector.value;
-            });
+            let selectedDpiLevel = dpiLevelSelector ? dpiLevelSelector.value : null;
+            if (dpiLevelSelector) {
+                dpiLevelSelector.addEventListener('change', () => {
+                    selectedDpiLevel = dpiLevelSelector.value;
+                });
+            }
 
             const dpiLevelSelectorOpenAI = document.getElementById('dpi-level-openai');
-            let selectedDpiLevelOpenAI = dpiLevelSelectorOpenAI.value;
-
-            dpiLevelSelectorOpenAI.addEventListener('change', () => {
-                selectedDpiLevelOpenAI = dpiLevelSelectorOpenAI.value;
-            });
+            let selectedDpiLevelOpenAI = dpiLevelSelectorOpenAI ? dpiLevelSelectorOpenAI.value : null;
+            if (dpiLevelSelectorOpenAI) {
+                dpiLevelSelectorOpenAI.addEventListener('change', () => {
+                    selectedDpiLevelOpenAI = dpiLevelSelectorOpenAI.value;
+                });
+            }
 
 
             // BlenderBot tab elements
@@ -758,9 +658,8 @@
 
                 addBotMessage(chatMessages, '<i class="fas fa-spinner fa-spin"></i> Thinking...', 'thinking-message');
 
-                const modeOllama = document.getElementById('dpi-mode-ollama').value;
                 const payload = { message: userMessage };
-                if (modeOllama === 'escalation') {
+                if (DPI_MODE === 'escalation') {
                     payload.escalation_stage = parseInt(document.getElementById('dpi-escalation-stage-ollama').value, 10);
                 } else {
                     payload.level = document.getElementById('dpi-level').value;
@@ -806,9 +705,8 @@
                 addBotMessage(openaiChatMessages, '<i class="fas fa-spinner fa-spin"></i> Thinking...', 'thinking-message');
                 
                 // INSECURE: Send OpenAI API key directly to OpenAI through our backend
-                const modeOpenai = document.getElementById('dpi-mode-openai').value;
                 const openaiPayload = { message: userMessage };
-                if (modeOpenai === 'escalation') {
+                if (DPI_MODE === 'escalation') {
                     openaiPayload.escalation_stage = parseInt(document.getElementById('dpi-escalation-stage-openai').value, 10);
                 } else {
                     openaiPayload.level = selectedDpiLevelOpenAI;
