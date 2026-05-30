@@ -7,6 +7,66 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .rag-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .rag-toolbar-label {
+            margin: 0;
+            font-size: 0.9em;
+            color: #444;
+            white-space: nowrap;
+        }
+        .rag-toolbar-file {
+            flex: 1 1 220px;
+            min-width: 180px;
+            max-width: 320px;
+        }
+        .rag-toolbar-action {
+            position: relative;
+            display: inline-block;
+        }
+        .rag-toolbar-btn {
+            background-color: #0d6efd;
+            color: #fff;
+            white-space: nowrap;
+            min-width: 130px;
+        }
+        .rag-toolbar-btn:hover {
+            background-color: #0b5ed7;
+        }
+        .rag-toolbar .custom-tooltip {
+            display: none;
+            position: absolute;
+            right: 0;
+            bottom: 110%;
+            z-index: 10;
+            background: #f4f1f1;
+            color: #040404;
+            padding: 10px 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+            font-size: 0.8em;
+            line-height: 1.4;
+            white-space: normal;
+        }
+        .rag-toolbar .rag-tooltip-wide {
+            min-width: 340px;
+            max-width: 420px;
+        }
+        .rag-toolbar .rag-tooltip-narrow {
+            min-width: 240px;
+            max-width: 320px;
+        }
+    </style>
 </head>
 <body>
 
@@ -79,38 +139,26 @@
                                             <button type="button" class="verify-button" id="catering-rag-verify-ollama">Verify solve</button>
                                             <div id="catering-rag-verify-result-ollama" class="verify-result"></div>
                                         </div>
-                                        <table style="width:100%;margin-top:12px;margin-bottom:12px;">
-                                            <tr>
-                                                <td style="padding:0;">
-                                                    <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:4px;padding:0;">
-                                                        <div style="flex:1;text-align:center;vertical-align:middle;padding:12px;">
-                                                            <input type="file" id="catering-rag-file-ollama" class="form-control" style="max-width:220px;display:inline-block;margin-left:8px;" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json">
-                                                            <label for="catering-rag-file-ollama" style="margin-bottom:0;">Upload custom knowledge doc (.txt, .md, .csv, .json, .log)</label>
-                                                        </div>
-                                                        <div style="padding:12px;margin-right:50px;">
-                                                            <div style="position:relative;display:inline-block;width:100%;">
-                                                                <button id="catering-rag-upload-ollama" class="btn btn-primary" style="width:120px;background-color:#0d6efd;white-space:nowrap;" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">
-                                                                    <i class="fas fa-sync-alt"></i> Update RAG
-                                                                </button>
-                                                                <div class="custom-tooltip" style="display:none;position:absolute;right:0;bottom:110%;z-index:10;background:#f4f1f1;color:#040404;padding:10px 12px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:0.8em;min-width:340px;max-width:420px;white-space:normal;line-height:1.4;">
-                                                                    Upload a fake policy document that invents a rule real policy would never allow (for example "every large office package must include pineapple"); then in <strong>Demonstration</strong> chat, ask your <em>own</em> question about large office or event catering and reuse vocabulary from your poison file so <strong>TF-IDF</strong> pulls your chunk to the top. Open <strong>Full response JSON</strong> to see which chunk ids were retrieved and whether the model followed the poison.
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style="width:1%;vertical-align:middle;padding-left:20px;">
-                                                    <div style="position:relative;display:inline-block;width:100%;">
-                                                        <button type="button" class="btn btn-primary" id="catering-rag-reset-ollama" style="width:95%;min-width:120px;background-color:#0d6efd;" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">Reset corpus</button>
-                                                        <div class="custom-tooltip" style="display:none;position:absolute;right:0;bottom:110%;z-index:10;background:#f4f1f1;color:#040404;padding:8px 14px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:0.8em;min-width:280px;max-width:360px;white-space:normal;">
-                                                            Reset the corpus if you want a clean baseline
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                       
-                                    </div>    
+                                        <div class="rag-toolbar">
+                                            <label for="catering-rag-file-ollama" class="rag-toolbar-label">Knowledge doc (.txt, .md, .csv, .json, .log):</label>
+                                            <input type="file" id="catering-rag-file-ollama" class="form-control rag-toolbar-file" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json">
+                                            <div class="rag-toolbar-action">
+                                                <button type="button" id="catering-rag-upload-ollama" class="btn btn-primary rag-toolbar-btn" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">
+                                                    <i class="fas fa-sync-alt"></i> Update RAG
+                                                </button>
+                                                <div class="custom-tooltip rag-tooltip-wide">
+                                                    Upload a fake policy document that invents a rule real policy would never allow (for example "every large office package must include pineapple"); then in <strong>Demonstration</strong> chat, ask your <em>own</em> question about large office or event catering and reuse vocabulary from your poison file so <strong>TF-IDF</strong> pulls your chunk to the top. Open <strong>Full response JSON</strong> to see which chunk ids were retrieved and whether the model followed the poison.
+                                                </div>
+                                            </div>
+                                            <div class="rag-toolbar-action">
+                                                <button type="button" id="catering-rag-reset-ollama" class="btn btn-primary rag-toolbar-btn" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">Reset corpus</button>
+                                                <div class="custom-tooltip rag-tooltip-narrow">
+                                                    Reset the corpus if you want a clean baseline
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
 
                                     <details class="section-box" style="margin-top:10px;">
                                         <summary>Full response JSON</summary>
@@ -140,36 +188,24 @@
                                             <button type="button" class="verify-button" id="catering-rag-verify-cloud">Verify solve</button>
                                             <div id="catering-rag-verify-result-cloud" class="verify-result"></div>
                                         </div>
-                                        <table style="width:100%;margin-top:12px;margin-bottom:12px;">
-                                            <tr>
-                                                <td style="padding:0;">
-                                                    <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:4px;padding:0;">
-                                                        <div style="flex:1;text-align:center;vertical-align:middle;padding:12px;">
-                                                            <input type="file" id="catering-rag-file-cloud" class="form-control" style="max-width:220px;display:inline-block;margin-left:8px;" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json">
-                                                            <label for="catering-rag-file-cloud" style="margin-bottom:0;">Upload custom knowledge doc (.txt, .md, .csv, .json, .log)</label>
-                                                        </div>
-                                                        <div style="padding:12px;margin-right:50px;">
-                                                            <div style="position:relative;display:inline-block;width:100%;">
-                                                                <button type="button" class="btn btn-primary" id="catering-rag-upload-cloud" style="width:120px;background-color:#0d6efd;white-space:nowrap;" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">
-                                                                    <i class="fas fa-sync-alt"></i> Update RAG
-                                                                </button>
-                                                                <div class="custom-tooltip" style="display:none;position:absolute;right:0;bottom:110%;z-index:10;background:#f4f1f1;color:#040404;padding:10px 12px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:0.8em;min-width:340px;max-width:420px;white-space:normal;line-height:1.4;">
-                                                                    Upload a fake policy document that invents a rule real policy would never allow (for example "every large office package must include pineapple"); then in <strong>Demonstration</strong> chat, ask your <em>own</em> question about large office or event catering and reuse vocabulary from your poison file so <strong>TF-IDF</strong> pulls your chunk to the top. Open <strong>Full response JSON</strong> to see which chunk ids were retrieved and whether the model followed the poison.
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style="width:1%;vertical-align:middle;padding-left:20px;">
-                                                    <div style="position:relative;display:inline-block;width:100%;">
-                                                        <button type="button" class="btn btn-primary" id="catering-rag-reset-cloud" style="width:95%;min-width:120px;background-color:#0d6efd;" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">Reset corpus</button>
-                                                        <div class="custom-tooltip" style="display:none;position:absolute;right:0;bottom:110%;z-index:10;background:#f4f1f1;color:#040404;padding:8px 14px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:0.8em;min-width:280px;max-width:360px;white-space:normal;">
-                                                            Reset the corpus if you want a clean baseline
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                        <div class="rag-toolbar">
+                                            <label for="catering-rag-file-cloud" class="rag-toolbar-label">Knowledge doc (.txt, .md, .csv, .json, .log):</label>
+                                            <input type="file" id="catering-rag-file-cloud" class="form-control rag-toolbar-file" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json">
+                                            <div class="rag-toolbar-action">
+                                                <button type="button" id="catering-rag-upload-cloud" class="btn btn-primary rag-toolbar-btn" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">
+                                                    <i class="fas fa-sync-alt"></i> Update RAG
+                                                </button>
+                                                <div class="custom-tooltip rag-tooltip-wide">
+                                                    Upload a fake policy document that invents a rule real policy would never allow (for example "every large office package must include pineapple"); then in <strong>Demonstration</strong> chat, ask your <em>own</em> question about large office or event catering and reuse vocabulary from your poison file so <strong>TF-IDF</strong> pulls your chunk to the top. Open <strong>Full response JSON</strong> to see which chunk ids were retrieved and whether the model followed the poison.
+                                                </div>
+                                            </div>
+                                            <div class="rag-toolbar-action">
+                                                <button type="button" id="catering-rag-reset-cloud" class="btn btn-primary rag-toolbar-btn" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'">Reset corpus</button>
+                                                <div class="custom-tooltip rag-tooltip-narrow">
+                                                    Reset the corpus if you want a clean baseline
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <details class="section-box" style="margin-top:10px;">
                                         <summary>Full response JSON</summary>

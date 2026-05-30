@@ -47,18 +47,15 @@
 
                                     <p>We discovered that all coupons on the previous page were compromised, so this time we’re publishing the coupon words in <b>QR codes </b>. </p>
                                      <p>You won’t be able to chat with the model and trick it, just upload your QR code image. Let’s see what you can do! 🙂</p>
-                                     <p>Use the <strong>Promotion photo</strong> tab for a second challenge: pizza-box images whose metadata can steer the assistant.</p>
                                     </div>
                                     <img style="width: 220px; height: auto; margin-left: 15px; flex-shrink: 0;" src="{{ url_for('static', filename='img/injection-indirect.png') }}" alt="Insecure Plugin Design Diagram" class="demonstration-image">
                                 </div>
                             
 
-                <!-- Main demo tabs (QR coupon + promotion photo) -->
                 <div class="model-tabs main-dpi-tabs">
                     <div class="tab-headers">
                         <div class="tab-header active" data-tab="blenderbot-model">Free Model</div>
                         <div class="tab-header" data-tab="openai-model">{{ llm_ui.tab_cloud_title }}</div>
-                        <div class="tab-header" data-tab="promotion-lab">Promotion photo</div>
                     </div>
 
                     <!-- BlenderBot Tab Content -->
@@ -144,7 +141,7 @@
                         </div>
                     </div>
 
-                        <div class="tab-content" id="promotion-lab-tab">
+                        <!-- <div class="tab-content" id="promotion-lab-tab">
                             <div class="model-implementation-section">
                                 <section class="section-box" style="margin-bottom:1rem;">
                                     <p>Customers upload a pizza-box photo to unlock rewards. Hidden metadata can steer the assistant in vulnerable mode, while hardened mode treats extracted text as untrusted data only.</p>
@@ -210,7 +207,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                 </div>
             </section>
             </div>
@@ -279,7 +276,6 @@
             const openaiChatMessages = document.getElementById('openai-chat-messages');
             
             async function checkSessionApiKey() {
-                const promoStatus = document.getElementById('promo-cloud-api-status');
                 try {
                     const response = await fetch('/check-openai-api-key');
                     const data = await response.json();
@@ -289,10 +285,6 @@
                         if (openaiApiStatus) {
                             openaiApiStatus.className = 'api-status connected';
                             openaiApiStatus.innerHTML = '<i class="fas fa-circle-check"></i> ' + ui.status_connected;
-                        }
-                        if (promoStatus) {
-                            promoStatus.className = 'api-status connected';
-                            promoStatus.innerHTML = '<i class="fas fa-circle-check"></i> ' + ui.status_connected;
                         }
                         // Add welcome message if chat is empty
                         if (openaiChatMessages && openaiChatMessages.children.length <= 2) {
@@ -304,20 +296,12 @@
                             openaiApiStatus.className = 'api-status disconnected';
                             openaiApiStatus.innerHTML = '<i class="fas fa-circle-xmark"></i> No API key found. Please set it in Lab Setup.';
                         }
-                        if (promoStatus) {
-                            promoStatus.className = 'api-status disconnected';
-                            promoStatus.innerHTML = '<i class="fas fa-circle-xmark"></i> No API key found';
-                        }
                     }
                 } catch (error) {
                     console.error('Error checking API key:', error);
                     if (openaiApiStatus) {
                         openaiApiStatus.className = 'api-status disconnected';
                         openaiApiStatus.innerHTML = '<i class="fas fa-circle-xmark"></i> Error checking API key';
-                    }
-                    if (promoStatus) {
-                        promoStatus.className = 'api-status disconnected';
-                        promoStatus.innerHTML = '<i class="fas fa-circle-xmark"></i> Error checking API key';
                     }
                 }
             }
@@ -340,10 +324,6 @@
             }
 
             initializeTabs();
-            if (location.hash === '#promotion-lab' || location.hash === '#promotion-photo-claim') {
-                const tab = document.querySelector('.main-dpi-tabs > .tab-headers .tab-header[data-tab="promotion-lab"]');
-                if (tab) tab.click();
-            }
             checkSessionApiKey();
 
             function initializeLlamaChat() {
@@ -474,70 +454,6 @@
 
             document.getElementById("verify-button-ollama").addEventListener("click", () => verifyKey("verify-key-ollama", "verify-result-ollama", dpiLevelSelector.value));
             document.getElementById("verify-button-openai").addEventListener("click", () => verifyKey("verify-key-openai", "verify-result-openai", dpiLevelSelectorOpenAI.value));
-
-            async function submitPromo(fileId, hardenedId, outId, provider) {
-                const f = document.getElementById(fileId).files[0];
-                if (!f) return;
-                const fd = new FormData();
-                fd.append('file', f);
-                fd.append('provider', provider);
-                if (document.getElementById(hardenedId).checked) fd.append('hardened', 'true');
-                const r = await fetch('/api/promotion-photo/claim', { method: 'POST', body: fd });
-                const t = await r.text();
-                try { document.getElementById(outId).textContent = JSON.stringify(JSON.parse(t), null, 2); }
-                catch { document.getElementById(outId).textContent = t; }
-            }
-
-            function exportPromoText(filename, content) {
-                const blob = new Blob([content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-
-            function parsePromoOutputJson(preId) {
-                const text = document.getElementById(preId).textContent || '';
-                try { return JSON.parse(text); } catch { return null; }
-            }
-
-            function setPromoVerifyResult(elId, ok, msg) {
-                const el = document.getElementById(elId);
-                el.textContent = (ok ? '✅ ' : '❌ ') + msg;
-                el.style.color = ok ? 'green' : 'red';
-            }
-
-            document.getElementById('promo-form-ollama').addEventListener('submit', (e) => {
-                e.preventDefault();
-                submitPromo('promo-file-ollama', 'promo-hardened-ollama', 'promo-out-ollama', 'ollama');
-            });
-            document.getElementById('promo-form-cloud').addEventListener('submit', (e) => {
-                e.preventDefault();
-                submitPromo('promo-file-cloud', 'promo-hardened-cloud', 'promo-out-cloud', 'openai');
-            });
-
-            document.getElementById('promo-export-ollama').addEventListener('click', () => {
-                exportPromoText('promotion_claim_ollama.txt', document.getElementById('promo-out-ollama').textContent || '');
-            });
-            document.getElementById('promo-export-cloud').addEventListener('click', () => {
-                exportPromoText('promotion_claim_cloud.txt', document.getElementById('promo-out-cloud').textContent || '');
-            });
-            document.getElementById('promo-verify-ollama').addEventListener('click', () => {
-                const data = parsePromoOutputJson('promo-out-ollama');
-                if (!data) return setPromoVerifyResult('promo-verify-result-ollama', false, 'Run the challenge first.');
-                const ok = Boolean(data.solve_phrase_present);
-                setPromoVerifyResult('promo-verify-result-ollama', ok, ok ? 'Solve confirmed.' : 'Solve conditions not met.');
-            });
-            document.getElementById('promo-verify-cloud').addEventListener('click', () => {
-                const data = parsePromoOutputJson('promo-out-cloud');
-                if (!data) return setPromoVerifyResult('promo-verify-result-cloud', false, 'Run the challenge first.');
-                const ok = Boolean(data.solve_phrase_present);
-                setPromoVerifyResult('promo-verify-result-cloud', ok, ok ? 'Solve confirmed.' : 'Solve conditions not met.');
-            });
         });
     </script>
 </body>

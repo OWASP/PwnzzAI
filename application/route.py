@@ -1676,9 +1676,14 @@ def api_catering_sql_chat():
         return jsonify({"error": str(e)}), 500
 
 
+@application.app.route("/promotion-photo")
+def promotion_photo():
+    return render_template("promotion_photo.html")
+
+
 @application.app.route("/promotion-photo-claim")
 def promotion_photo_claim_page():
-    return redirect(url_for("indirect_prompt_injection") + "#promotion-lab", code=302)
+    return redirect(url_for("promotion_photo"), code=302)
 
 
 @application.app.route("/api/promotion-photo/claim", methods=["POST"])
@@ -1996,7 +2001,11 @@ def chat_with_ollama_dos():
     
 @application.app.route('/direct-prompt-injection')
 def direct_prompt_injection():
-    return render_template('direct_prompt_injection.html')
+    return render_template('direct_prompt_injection.html', dpi_mode='baseline')
+
+@application.app.route('/direct-prompt-injection/guardrail-ladder')
+def direct_prompt_injection_guardrail():
+    return render_template('direct_prompt_injection.html', dpi_mode='escalation')
 
 @application.app.route('/indirect-prompt-injection')
 def indirect_prompt_injection():

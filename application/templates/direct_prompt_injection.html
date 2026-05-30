@@ -3,10 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Direct Prompt Injection - PwnzzAI Shop</title>
+    <title>{% if dpi_mode == 'escalation' %}Guardrail Ladder{% else %}Direct Prompt Injection — Baseline{% endif %} - PwnzzAI Shop</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .dpi-hint-trigger {
+            position: relative;
+            display: inline-block;
+            margin-left: 10px;
+            padding: 2px 8px;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: #0d6efd;
+            background: rgba(13, 110, 253, 0.08);
+            border: 1px solid rgba(13, 110, 253, 0.35);
+            border-radius: 12px;
+            cursor: help;
+            user-select: none;
+            line-height: 1.4;
+            vertical-align: middle;
+        }
+        .dpi-hint-trigger:hover,
+        .dpi-hint-trigger:focus {
+            background: rgba(13, 110, 253, 0.15);
+            outline: none;
+        }
+        .dpi-hint-trigger.is-empty {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .dpi-hint-trigger .dpi-hint-popup {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 200;
+            min-width: 340px;
+            max-width: 460px;
+            padding: 12px 16px;
+            background: #f7f5f5;
+            color: #1a1a1a;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            font-size: 0.9em;
+            font-weight: 400;
+            line-height: 1.5;
+            white-space: normal;
+            text-align: left;
+            cursor: default;
+        }
+        .dpi-hint-trigger .dpi-hint-popup h4 {
+            margin: 0 0 6px;
+            font-size: 1em;
+            color: #0d6efd;
+        }
+        .dpi-hint-trigger .dpi-hint-popup p {
+            margin: 6px 0;
+        }
+        .dpi-hint-trigger:hover .dpi-hint-popup,
+        .dpi-hint-trigger:focus .dpi-hint-popup,
+        .dpi-hint-trigger:focus-within .dpi-hint-popup,
+        .dpi-hint-trigger.is-open .dpi-hint-popup {
+            display: block;
+        }
+    </style>
 </head>
 <body>
 
@@ -14,7 +76,7 @@
     {% include 'navbar.html' %}
 
     <main class="container">
-        <h1>Direct Prompt Injection / System Prompt Leakage</h1>
+        <h1>{% if dpi_mode == 'escalation' %}Guardrail Ladder — Direct Prompt Injection{% else %}Direct Prompt Injection / System Prompt Leakage{% endif %}</h1>
         
         <div class="direct-prompt-injection-content">
             <details class="description-dropdown">
@@ -72,19 +134,7 @@
                     <!-- BlenderBot Tab Content -->
                     <div class="tab-content active" id="blenderbot-model-tab">
                     <div class="model-implementation-section">
-                        <div class="form-group">
-                            <label for="dpi-mode-ollama">Lab mode:</label>
-                            <select id="dpi-mode-ollama" class="form-control">
-                                <option value="baseline">Baseline — classic five difficulty levels</option>
-                                <option value="escalation">Guardrail ladder — common defenses B0–B9 and how each one is bypassed</option>
-                            </select>
-                            <p class="help-text" id="dpi-ladder-help-ollama" style="display:none;"><small>
-                                The <strong>Guardrail ladder</strong> runs the same prompt-injection technique against ten
-                                progressively more sophisticated production-style defenses (system prompts, ASCII gates,
-                                keyword blocklists, regex sanitizers, output redaction, multi-turn scanners). Each level
-                                explains the guardrail in play, why a real team would ship it, and why it still fails.
-                            </small></p>
-                        </div>
+                        {% if dpi_mode != 'escalation' %}
                         <!-- Level Selection (baseline) -->
                         <div class="form-group" id="dpi-baseline-wrap-ollama">
                             <label for="dpi-level">Injection level:</label>
@@ -96,12 +146,19 @@
                                 <option value="5">Level 5 – It is impossible to trick me!</option>
                             </select>
                         </div>
-                        <div class="form-group" id="dpi-escalation-wrap-ollama" style="display:none;">
-                            <label for="dpi-escalation-stage-ollama">Guardrail level:</label>
+                        {% else %}
+                        <div class="form-group" id="dpi-escalation-wrap-ollama">
+                            <label for="dpi-escalation-stage-ollama">
+                                Guardrail level:
+                                <span class="dpi-hint-trigger" id="dpi-hint-trigger-ollama" tabindex="0" role="button" aria-label="Show guardrail hint">
+                                    <i class="fas fa-circle-info"></i> Hint
+                                    <div id="dpi-defense-panel-ollama" class="dpi-hint-popup"></div>
+                                </span>
+                            </label>
                             <select id="dpi-escalation-stage-ollama" class="form-control"></select>
                             <p class="help-text"><small>Level 6 (multi-turn) also accepts JSON field <code>history</code> on the API; optional advanced use.</small></p>
                         </div>
-                        <div id="dpi-defense-panel-ollama" class="section-box" style="margin-top:12px; display:none;"></div>
+                        {% endif %}
                             <!-- Chat Interface -->
                             <div class="chat-container">
                                 <div id="chat-messages" class="chat-messages">
@@ -127,7 +184,7 @@
                         <!-- OpenAI Tab Content -->
                         <div class="tab-content" id="openai-model-tab">
                         <div class="model-implementation-section">
-                        <div class="form-group">
+                        <!-- <div class="form-group">
                             <label for="dpi-mode-openai">Lab mode:</label>
                             <select id="dpi-mode-openai" class="form-control">
                                 <option value="baseline">Baseline — classic five difficulty levels</option>
@@ -138,7 +195,7 @@
                                 progressively more sophisticated production-style defenses. Each level explains the guardrail
                                 in play, why a real team would ship it, and why it still fails.
                             </small></p>
-                        </div>
+                        </div> -->
                         <div class="form-group" id="dpi-baseline-wrap-openai">
                             <label for="dpi-level-openai">Injection level:</label>
                             <select id="dpi-level-openai" class="form-control">
@@ -150,10 +207,15 @@
                             </select>
                         </div>
                         <div class="form-group" id="dpi-escalation-wrap-openai" style="display:none;">
-                            <label for="dpi-escalation-stage-openai">Guardrail level:</label>
+                            <label for="dpi-escalation-stage-openai">
+                                Guardrail level:
+                                <span class="dpi-hint-trigger" id="dpi-hint-trigger-openai" tabindex="0" role="button" aria-label="Show guardrail hint">
+                                    <i class="fas fa-circle-info"></i> Hint
+                                    <div id="dpi-defense-panel-openai" class="dpi-hint-popup"></div>
+                                </span>
+                            </label>
                             <select id="dpi-escalation-stage-openai" class="form-control"></select>
                         </div>
-                        <div id="dpi-defense-panel-openai" class="section-box" style="margin-top:12px; display:none;"></div>
                             <!-- OpenAI Status Section -->
                             <div class="token-section openai-token-section">
                                 <h3>{{ llm_ui.provider_name }} API status</h3>
@@ -371,12 +433,14 @@
             }
 
             function renderDefensePanel(panelEl, stage) {
+                const trigger = panelEl.closest('.dpi-hint-trigger');
                 const s = escalationStagesCache.find((x) => x.stage === stage) || escalationStagesCache[0];
                 if (!s) {
-                    panelEl.style.display = 'none';
+                    panelEl.innerHTML = '';
+                    if (trigger) trigger.classList.add('is-empty');
                     return;
                 }
-                panelEl.style.display = 'block';
+                if (trigger) trigger.classList.remove('is-empty');
                 const heading = '<h4 style="margin-top:0;">Guardrail ' + s.stage + ' — ' + escapeHtml(s.title) + '</h4>';
                 const blocks = [];
                 if (s.defense_attempted) {
@@ -396,6 +460,7 @@
             }
 
             function wireEscalationMode(modeSelect, baselineWrap, escWrap, panelEl, stageSelect, provider, helpEl) {
+                const trigger = panelEl.closest('.dpi-hint-trigger');
                 function sync() {
                     if (provider === 'ollama') {
                         persistOllamaDomSnapshot();
@@ -405,7 +470,7 @@
                     const esc = modeSelect.value === 'escalation';
                     baselineWrap.style.display = esc ? 'none' : 'block';
                     escWrap.style.display = esc ? 'block' : 'none';
-                    panelEl.style.display = esc ? 'block' : 'none';
+                    if (trigger) trigger.style.display = esc ? 'inline-block' : 'none';
                     if (helpEl) helpEl.style.display = esc ? 'block' : 'none';
                     if (provider === 'ollama') {
                         showOllamaChatForCurrentSettings();

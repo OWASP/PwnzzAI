@@ -38,21 +38,35 @@
             </li>
             <li><a href="{{ url_for('supply_chain') }}" {% if request.path == url_for('supply_chain') %}class="active"{% endif %}><i class="fas "></i> <span>Supply Chain Vulnerability</span></a></li>
             <li><a href="{{ url_for('insecure_plugin') }}" {% if request.path == url_for('insecure_plugin') %}class="active"{% endif %}><i class="fas "></i> <span>Insecure Output Handling</span></a></li>
-            <li class="nav-item-group nav-dropdown{% if request.path == url_for('direct_prompt_injection') %} open{% endif %}" data-nav-dropdown="direct-prompt-injection">
-                <button type="button" class="nav-item-group-title nav-dropdown-toggle{% if request.path == url_for('direct_prompt_injection') %} active{% endif %}" aria-expanded="{% if request.path == url_for('direct_prompt_injection') %}true{% else %}false{% endif %}" aria-controls="nav-subitems-direct-prompt-injection">
+            {% set dpi_group_active = request.path == url_for('direct_prompt_injection') or request.path == url_for('direct_prompt_injection_guardrail') %}
+            <li class="nav-item-group nav-dropdown{% if dpi_group_active %} open{% endif %}" data-nav-dropdown="direct-prompt-injection">
+                <button type="button" class="nav-item-group-title nav-dropdown-toggle{% if dpi_group_active %} active{% endif %}" aria-expanded="{% if dpi_group_active %}true{% else %}false{% endif %}" aria-controls="nav-subitems-direct-prompt-injection">
                     <i class="fas"></i> <span>Direct Prompt Injection</span>
                     <i class="fas fa-chevron-down nav-dropdown-icon" aria-hidden="true"></i>
                 </button>
                 <ul class="nav-subitems" id="nav-subitems-direct-prompt-injection">
                     <li>
-                        <a href="{{ url_for('direct_prompt_injection') }}#baseline" class="nav-subitem-link dpi-nav-sub" data-dpi-mode="baseline" title="Classic five difficulty levels"><i class="fas"></i> <span>Baseline</span></a>
+                        <a href="{{ url_for('direct_prompt_injection') }}" class="nav-subitem-link{% if request.path == url_for('direct_prompt_injection') %} active{% endif %}" title="Classic five difficulty levels"><i class="fas"></i> <span>Baseline</span></a>
                     </li>
                     <li>
-                        <a href="{{ url_for('direct_prompt_injection') }}#guardrail-ladder" class="nav-subitem-link dpi-nav-sub" data-dpi-mode="escalation" title="Common production-style guardrails B0–B9 and how each is bypassed"><i class="fas fa-shield-halved"></i> <span>Guardrail ladder</span></a>
+                        <a href="{{ url_for('direct_prompt_injection_guardrail') }}" class="nav-subitem-link{% if request.path == url_for('direct_prompt_injection_guardrail') %} active{% endif %}" title="Common production-style guardrails B0–B9 and how each is bypassed"><i class="fas fa-shield-halved"></i> <span>Guardrail ladder</span></a>
                     </li>
                 </ul>
             </li>
-            <li><a href="{{ url_for('indirect_prompt_injection') }}" {% if request.path == url_for('indirect_prompt_injection') %}class="active"{% endif %}><i class="fas "></i> <span>Indirect Prompt Injection</span></a></li>
+            <li class="nav-item-group nav-dropdown{% if request.path == url_for('indirect_prompt_injection') or request.path == url_for('promotion_photo') %} open{% endif %}" data-nav-dropdown="indirect-prompt-injection">
+             <button type="button" class="nav-item-group-title nav-dropdown-toggle{% if request.path == url_for('indirect_prompt_injection') or request.path == url_for('promotion_photo') %} active{% endif %}" aria-expanded="{% if request.path == url_for('indirect_prompt_injection') or request.path == url_for('promotion_photo') %}true{% else %}false{% endif %}" aria-controls="nav-subitems-indirect-prompt-injection">
+                    <i class="fas"></i> <span>Indirect Prompt Injection</span>
+                    <i class="fas fa-chevron-down nav-dropdown-icon" aria-hidden="true"></i>
+                </button>
+                <ul class="nav-subitems" id="nav-subitems-indirect-prompt-injection">
+                    <li>
+                        <a href="{{ url_for('indirect_prompt_injection') }}#qrcode" class="nav-subitem-link{% if request.path == url_for('indirect_prompt_injection') %} active{% endif %}" title="QR-code coupon challenge"><i class="fas"></i> <span>QRCode</span></a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('promotion_photo') }}" class="nav-subitem-link{% if request.path == url_for('promotion_photo') %} active{% endif %}" title="Pizza-box image metadata challenge"><i class="fas fa-shield-halved"></i> <span>Promotion Photo</span></a>
+                    </li>
+                </ul>
+
             <li><a href="{{ url_for('dos_attack') }}" {% if request.path == url_for('dos_attack') or request.path == url_for('real_dos_attack') %}class="active"{% endif %}><i class="fas"></i> <span>Unbounded Consumption</span></a></li>
             <li><a href="{{ url_for('sensitive_info') }}" {% if request.path == url_for('sensitive_info') %}class="active"{% endif %}><i class="fas"></i> <span>Sensitive Information Disclosure</span></a></li>
             <li><a href="{{ url_for('excessive_agency') }}" {% if request.path == url_for('excessive_agency') %}class="active"{% endif %}><i class="fas"></i> <span>Excessive Agency</span></a></li>
@@ -232,27 +246,6 @@
 </style>
 <script>
 (function () {
-    window.pwnzzSyncDpiNavActive = function () {
-        var path = window.location.pathname || '';
-        if (path.indexOf('direct-prompt-injection') === -1) {
-            return;
-        }
-        var h = (window.location.hash || '#baseline').toLowerCase();
-        var esc = h === '#guardrail-ladder' || h === '#escalation';
-        document.querySelectorAll('a.dpi-nav-sub[data-dpi-mode]').forEach(function (a) {
-            var wantEsc = a.getAttribute('data-dpi-mode') === 'escalation';
-            if (wantEsc === esc) {
-                a.classList.add('active');
-            } else {
-                a.classList.remove('active');
-            }
-        });
-    };
-    function bootDpiNav() {
-        if (window.pwnzzSyncDpiNavActive) {
-            window.pwnzzSyncDpiNavActive();
-        }
-    }
     function bootNavDropdowns() {
         document.querySelectorAll('.nav-item-group.nav-dropdown').forEach(function (group) {
             var toggle = group.querySelector('.nav-dropdown-toggle');
@@ -267,14 +260,9 @@
         });
     }
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () {
-            bootDpiNav();
-            bootNavDropdowns();
-        });
+        document.addEventListener('DOMContentLoaded', bootNavDropdowns);
     } else {
-        bootDpiNav();
         bootNavDropdowns();
     }
-    window.addEventListener('hashchange', bootDpiNav);
 })();
 </script>
