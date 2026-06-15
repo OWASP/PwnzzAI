@@ -160,4 +160,4 @@ If you use a non-OpenAI provider, the app tries to show the right **names and li
 - **Model not found:** The exact string must match what LiteLLM and your provider support; copy it from the provider’s or LiteLLM’s documentation.
 - **Still seeing “OpenAI” in the UI:** Set `LLM_UI_PROVIDER_NAME` or use a `gemini/` / `anthropic/` route so the built-in labels update; see `.env.example`.
 
-For a full list of variables, see **[`.env.example`](../.env.example)** in the project root.
+For a full list of variables, see **[`.env.example`](../env.example)** in the project root.

@@ -1,0 +1,83 @@
+site_name: PwnzzAI Shop
+site_description: "The Vulnerable Pizza Shop — AI Security Education Platform"
+site_url: https://owasp.github.io/PwnzzAI
+repo_url: https://github.com/OWASP/PwnzzAI
+repo_name: OWASP/PwnzzAI
+edit_uri: blob/main/docs/
+
+theme:
+  name: material
+  logo: owasp.png
+  favicon: owasp.png
+  palette:
+    scheme: default
+    primary: red
+    accent: orange
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_bases: true
+            heading_level: 3
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - admonition
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Architecture:
+    - architecture/overview.md
+    - architecture/data-flow.md
+    - architecture/threat-model.md
+  - Developer Guide:
+    - developer/getting-started.md
+    - developer/codebase-map.md
+    - developer/api-reference.md
+    - developer/api-modules.md
+    - developer/adding-features.md
+  - Labs:
+    - labs/overview.md
+    - labs/lab-format.md
+    - labs/scenario-list.md
+  - Quality Assurance:
+    - quality-assurance/testing-guide.md
+    - quality-assurance/security-checks.md
+  - Operations:
+    - ops/docker-orchestration.md
+    - ops/env-variables.md
+    - ops/cloud-setup.md
+    - ops/troubleshooting.md
+  - Security:
+    - security/disclosure.md
+    - security/usage-policy.md
+    - security/data-privacy.md
+  - Community:
+    - community/contributing.md
+    - community/doc-standards.md
+  - Releases:
+    - releases/CHANGELOG.md
+    - releases/ROADMAP.md

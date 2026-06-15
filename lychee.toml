@@ -1,0 +1,41 @@
+# lychee link checker configuration
+# See: https://github.com/lycheeverse/lychee
+
+# Only scan markdown files
+include_paths = ["**/*.md"]
+
+# Exclude specific paths
+exclude_path = [
+  "venv",
+  ".venv",
+  "node_modules",
+  "site",
+  "docs/tmp"
+]
+
+# Exclude known-fragile URLs (localhost, placeholders, dynamic pages)
+exclude = [
+  "http://localhost",
+  "http://127.0.0.1",
+  "http://0.0.0.0",
+  "https://host.docker.internal",
+  "https://github.com/YOUR-USERNAME",
+  "https://github.com/your-org",
+  "http://<gpu-host>",
+  "http://<docker0-gateway>",
+  "http://<your-ollama-server>",
+  "http://<public-ip>",
+  "http://<this-host>",
+  "http://<gpu-host-ip>",
+  "http://your-ollama-server",
+  "https://aistudio.google.com/apikey"
+]
+
+timeout = 30
+retry_wait_time = 5
+max_concurrency = 8
+insecure = false
+
+accept = ["200", "201", "202", "203", "204", "206", "301", "302", "303", "307", "308"]
+
+format = "github"
