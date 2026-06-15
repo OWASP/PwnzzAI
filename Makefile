@@ -383,6 +383,10 @@ install-docs-qa: ## Install doc quality tools (pytest-codeblocks)
 check-codeblocks: ## Validate Python code blocks in documentation (scripts/check-codeblocks.py)
 	python3 scripts/check-codeblocks.py
 
+.PHONY: check-doc-coverage
+check-doc-coverage: ## Check all routes and vulnerability modules are documented (scripts/check-doc-coverage.py)
+	python3 scripts/check-doc-coverage.py
+
 .PHONY: check-links
 check-links: ## Check external links in markdown (requires lychee, or runs in CI)
 	@if command -v lychee >/dev/null 2>&1; then lychee --config lychee.toml .; \
@@ -399,4 +403,4 @@ check-markdown: ## Lint markdown style (requires markdownlint-cli2, or runs in C
 	else printf '%s\n' "markdownlint-cli2 not found. Install: npm install -g markdownlint-cli2, or let CI run this check." >&2; fi
 
 .PHONY: check-docs
-check-docs: check-markdown check-links check-spelling check-codeblocks ## Run all doc quality checks (best-effort locally, authoritative in CI)
+check-docs: check-markdown check-links check-spelling check-codeblocks check-doc-coverage ## Run all doc quality checks (best-effort locally, authoritative in CI)

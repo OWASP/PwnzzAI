@@ -6,7 +6,8 @@ on:
       - "docs/**"
       - "*.md"
       - "tests/README.md"
-      - "scripts/**/*.md"
+      - "scripts/*.md"
+      - "scripts/check-*.py"
       - ".github/workflows/docs-quality.yml"
       - ".markdownlint-cli2.yaml"
       - "cspell.json"
@@ -19,7 +20,8 @@ on:
       - "docs/**"
       - "*.md"
       - "tests/README.md"
-      - "scripts/**/*.md"
+      - "scripts/*.md"
+      - "scripts/check-*.py"
       - ".github/workflows/docs-quality.yml"
 
 permissions:

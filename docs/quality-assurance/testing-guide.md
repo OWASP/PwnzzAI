@@ -7,11 +7,9 @@ This directory contains the test suite for the PwnzzAI Shop application.
 ```
 tests/
 ├── conftest.py              # Shared fixtures and test configuration
-├── functional/              # Functional tests
+├── functional/              # Functional/end-to-end tests
 │   ├── test_user_workflows.py  # Complete user journey tests
-│   ├── test_vulnerability_workflows.py  # Vulnerability scenario tests
-│   ├── test_direct_prompt_escalation.py  # B0-B9 escalation ladder
-│   └── test_merged_lab_challenges.py  # Cross-lab challenge tests
+│   └── test_vulnerability_workflows.py  # Vulnerability scenario tests
 ├── integration/             # Integration tests
 │   ├── test_api.py         # API endpoint tests
 │   ├── test_auth.py        # Authentication tests
@@ -20,9 +18,6 @@ tests/
 │   ├── test_models.py      # Database model tests
 │   ├── test_sentiment_model.py  # Sentiment model tests
 │   └── test_vulnerabilities.py  # Vulnerability module tests
-├── e2e/                     # End-to-end live-app tests (opt-in)
-│   ├── test_challenge_solvability_e2e.py  # Lab solve harness
-│   └── challenge_catalog.py  # Static lab route definitions
 ├── README.md               # This file
 └── TEST_SUMMARY.md         # Comprehensive test documentation
 ```
@@ -89,10 +84,8 @@ KEEP_STACK_UP=1 scripts/qa/run-challenge-solve-e2e.sh
 
 ### Run Security Tests Only
 
-Security-boundary tests are distributed across the unit, integration, and functional test layers. Run the full suite to exercise all security assertions:
-
 ```bash
-pytest -v
+pytest tests/security/
 ```
 
 ### Run Specific Test Files
@@ -121,6 +114,9 @@ pytest tests/functional/test_user_workflows.py
 
 # Run only vulnerability workflow tests
 pytest tests/functional/test_vulnerability_workflows.py
+
+# Run only security tests
+pytest tests/security/test_security.py
 ```
 
 ### Run Specific Test Classes
@@ -222,7 +218,18 @@ This will generate an HTML coverage report in `htmlcov/index.html`.
 - Orders (place, view)
 - Vulnerability demonstration pages
 
-Security assertions are embedded across the functional, integration, and unit test layers rather than in a separate security test file.
+### Security Tests (`tests/security/`)
+
+**test_security.py** - Security and Vulnerability Tests
+- Authentication security (password hashing, SQL injection, brute force)
+- Authorization and access control (user isolation, unauthorized access)
+- Input validation (XSS, SQL injection, special characters)
+- Session security (timeout, concurrent sessions)
+- API security (rate limiting, JSON injection, parameter validation)
+- File upload security (malicious pickle files)
+- Password security (weak passwords, hash consistency)
+- Data exposure prevention (error messages, user enumeration)
+- Vulnerability demonstration safety
 
 ## Fixtures
 

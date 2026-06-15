@@ -17,7 +17,7 @@ Here, you'll explore **practical examples** of how vulnerabilities are created, 
    - [Option 2: Docker (Your Own Ollama + PwnzzAI Image)](#option-2-docker-your-own-ollama--pwnzzai-image)
    - [Option 3: Run Source Code Yourself](#option-3-run-source-code-yourself)
    - [Troubleshooting: Ollama Connection (WSL + Docker)](OLLAMA_CONNECTION_TROUBLESHOOTING.md)
-   - [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/workshop-cloud-llm-setup.md)
+   - [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/ops/cloud-setup.md)
 - [Features](#features)
 - [AI Security Coverage](#ai-security-coverage)
   - [Learning Framework](#learning-framework)
@@ -354,6 +354,6 @@ Available docs:
 - **[Escalation Ladder](docs/ESCALATION_LADDER.md)** — B0–B9 prompt injection stages, defense techniques
 - **[Environment Variables](docs/ENVIRONMENT_VARIABLES.md)** — Precedence chains for all config vars
 - **[Challenge Solutions](docs/CHALLENGE_SOLUTIONS.md)** — Walkthrough scaffold for all challenges
-- **[Cloud LLM Setup](docs/workshop-cloud-llm-setup.md)** — Workshop provider configuration
+- **[Cloud LLM Setup](docs/ops/cloud-setup.md)** — Workshop provider configuration
 
 **⚠️ Educational Purpose Only**: This application contains intentional security vulnerabilities. Do not use in production environments.

@@ -27,7 +27,7 @@ You can contribute to PwnzzAI Shop in several ways:
 - **New Vulnerabilities**: Add demonstrations of additional LLM vulnerabilities
 - **Documentation**: Improve explanations, tutorials, or documentation
 - **Test Coverage**: Add or improve test cases
-- **Security Mitigations**: Enhance security soutions in the mitigation strategies sections
+- **Security Mitigations**: Enhance security solutions in the mitigation strategies sections
 - **Model Support**: Add support for additional LLM models
 - **UI/UX Improvements**: Enhance the user interface or user experience
 - **Code Quality**: Refactor code for better maintainability
@@ -119,3 +119,41 @@ APP_IMAGE=pwnzzai:my-local-test ./scripts/docker-smoke-test.sh
 ```
 
 The script cleans up test containers automatically when it exits.
+
+## Coding Standards
+
+- Follow [PEP 8](https://peps.python.org/pep-0008/) with a soft 100-character line limit.
+- Use meaningful variable and function names.
+- Add type hints to function signatures where practical.
+- Write docstrings for public functions and classes.
+- Use `snake_case` for variables and functions, `PascalCase` for classes.
+- Keep functions small and single-purpose.
+- Avoid adding comments that describe what the code does — let the code speak for itself. Use comments only for non-obvious intent.
+
+For docs contributions, see [Doc Standards](../community/doc-standards.md).
+
+## Submitting Changes
+
+1. Ensure all tests pass: `pytest -v`
+2. Run the Docker smoke test if you changed infrastructure: `./scripts/docker-smoke-test.sh`
+3. Rebase your branch onto the latest `main` before opening a PR
+4. Write a clear PR title and description
+5. Reference any related issues in the PR body
+6. Keep PRs focused — one change per PR
+
+## Reporting Issues
+
+Use GitHub Issues to report bugs, suggest features, or ask questions.
+
+- **Bug report**: Include steps to reproduce, expected vs actual behavior, and your environment (OS, Python version, Docker version)
+- **Feature request**: Describe the problem you're solving and how your suggestion helps
+- **Question**: Use the [OWASP AI Exchange Discussions](https://github.com/OWASP/PwnzzAI/discussions)
+
+## Security Considerations
+
+This project contains intentional vulnerabilities for educational purposes.
+
+- **Never** submit a PR that fixes a documented lab vulnerability without prior discussion — these are features
+- New vulnerability contributions must include a hardened alternative (mode flag or separate endpoint)
+- Do not commit real API keys, credentials, or PII — use example values
+- If you discover an accidental vulnerability that is not part of the curriculum, follow the [Responsible Disclosure](../security/disclosure.md) process
