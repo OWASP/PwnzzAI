@@ -713,6 +713,7 @@ def demo_malicious_model():
         # Create an instance of the model - this will trigger the malicious code in __init__
         # The model's __init__ method hooks into Flask's response system
         model = SentimentModel_JS_malicious()
+        model.train()
         print(model.get_model_info())
         
         # Return a simple page - the model will inject its JavaScript into the response
