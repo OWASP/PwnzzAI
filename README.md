@@ -17,7 +17,7 @@ Here, you'll explore **practical examples** of how vulnerabilities are created, 
    - [Option 2: Docker (Your Own Ollama + PwnzzAI Image)](#option-2-docker-your-own-ollama--pwnzzai-image)
    - [Option 3: Run Source Code Yourself](#option-3-run-source-code-yourself)
    - [Troubleshooting: Ollama Connection (WSL + Docker)](OLLAMA_CONNECTION_TROUBLESHOOTING.md)
-   - [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/workshop-cloud-llm-setup.md)
+   - [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/ops/cloud-setup.md)
 - [Features](#features)
 - [AI Security Coverage](#ai-security-coverage)
   - [Learning Framework](#learning-framework)
@@ -79,7 +79,7 @@ cp .env.example .env
 #   (or LITELLM_MODEL=gemini/gemini-2.5-flash, etc.)
 ```
 
-Restart the app after editing `.env`. For a full provider/model walkthrough, see [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/workshop-cloud-llm-setup.md).
+Restart the app after editing `.env`. For a full provider/model walkthrough, see [Workshop hosts: choosing OpenAI, Claude, Gemini, or other cloud models](docs/ops/cloud-setup.md).
 
 ### Option 1: Docker (PwnzzAI + Ollama)
 
@@ -334,5 +334,26 @@ and,
 - **OpenAI Models**: GPT-3.5/GPT-4 demonstrations via OpenAI API.
 - **Ollama Models**: Free models, such as Mistral 7B and LLaMA 3.2 1B, are accessible through Ollama.
 
+
+## Documentation
+
+Full MkDocs site in `docs/` (built with Material theme, Mermaid diagrams, mkdocstrings).
+
+**Single source of truth rule:** content lives in one place — root files (`README.md`, `CONTRIBUTING.md`, `OLLAMA_CONNECTION_TROUBLESHOOTING.md`, `tests/README.md`, `.env.example`) are the canonical versions. Copying into `docs/` happens automatically before every build via:
+
+```bash
+make docs          # sync + mkdocs build
+make docs-serve    # sync + mkdocs serve
+```
+
+Available docs:
+
+- **[Architecture](docs/ARCHITECTURE.md)** — System design, module dependencies, request lifecycle (Mermaid diagrams)
+- **[API Reference](docs/API_REFERENCE.md)** — Complete endpoint documentation with request/response formats
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — Adding new vulnerabilities, doc workflow, coding conventions
+- **[Escalation Ladder](docs/ESCALATION_LADDER.md)** — B0–B9 prompt injection stages, defense techniques
+- **[Environment Variables](docs/ENVIRONMENT_VARIABLES.md)** — Precedence chains for all config vars
+- **[Challenge Solutions](docs/CHALLENGE_SOLUTIONS.md)** — Walkthrough scaffold for all challenges
+- **[Cloud LLM Setup](docs/ops/cloud-setup.md)** — Workshop provider configuration
 
 **⚠️ Educational Purpose Only**: This application contains intentional security vulnerabilities. Do not use in production environments.

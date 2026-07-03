@@ -130,7 +130,7 @@ The script cleans up test containers automatically when it exits.
 - Keep functions small and single-purpose.
 - Avoid adding comments that describe what the code does — let the code speak for itself. Use comments only for non-obvious intent.
 
-For docs contributions, see [Doc Standards](docs/community/doc-standards.md).
+For docs contributions, see [Doc Standards](../community/doc-standards.md).
 
 ## Submitting Changes
 
@@ -156,4 +156,4 @@ This project contains intentional vulnerabilities for educational purposes.
 - **Never** submit a PR that fixes a documented lab vulnerability without prior discussion — these are features
 - New vulnerability contributions must include a hardened alternative (mode flag or separate endpoint)
 - Do not commit real API keys, credentials, or PII — use example values
-- If you discover an accidental vulnerability that is not part of the curriculum, follow the [Responsible Disclosure](docs/security/disclosure.md) process
+- If you discover an accidental vulnerability that is not part of the curriculum, follow the [Responsible Disclosure](../security/disclosure.md) process

@@ -19,6 +19,7 @@ PWNZZAI_IMAGE   ?= ghcr.io/owasp/pwnzzai:latest
 LOCAL_IMAGE     ?= pwnzzai-local:dev
 TEST_IMAGE      ?= pwnzzai:test-ci
 APP_PORT        ?= 8080
+DOCS_SITE_DIR   ?= site
 OLLAMA_MODEL    ?= llama3.2:1b
 
 export FLASK_APP ?= main.py
@@ -353,3 +354,53 @@ register-challenge-py: ## python3 deploy/register_pwnzzai_challenge.py (env from
 .PHONY: reregister-challenge-py
 reregister-challenge-py: ## python3 deploy/reregister_pwnzzai_challenge.py
 	python3 deploy/reregister_pwnzzai_challenge.py
+
+# =============================================================================
+# Documentation (MkDocs)
+# =============================================================================
+
+.PHONY: sync-docs
+sync-docs: ## Copy canonical files into docs/ before build (single source of truth)
+	python3 scripts/sync-docs.py
+
+.PHONY: docs
+docs: sync-docs ## Build MkDocs site (runs sync-docs first)
+	mkdocs build --site-dir $(DOCS_SITE_DIR)
+
+.PHONY: docs-serve
+docs-serve: sync-docs ## Serve MkDocs locally with live reload (runs sync-docs first)
+	mkdocs serve
+
+# =============================================================================
+# Documentation Quality (local)
+# =============================================================================
+
+.PHONY: install-docs-qa
+install-docs-qa: ## Install doc quality tools (pytest-codeblocks)
+	"$(PYTHON)" -m pip install pytest-codeblocks
+
+.PHONY: check-codeblocks
+check-codeblocks: ## Validate Python code blocks in documentation (scripts/check-codeblocks.py)
+	python3 scripts/check-codeblocks.py
+
+.PHONY: check-doc-coverage
+check-doc-coverage: ## Check all routes and vulnerability modules are documented (scripts/check-doc-coverage.py)
+	python3 scripts/check-doc-coverage.py
+
+.PHONY: check-links
+check-links: ## Check external links in markdown (requires lychee, or runs in CI)
+	@if command -v lychee >/dev/null 2>&1; then lychee --config lychee.toml .; \
+	else printf '%s\n' "lychee not found. Install: cargo install lychee, or let CI run this check." >&2; fi
+
+.PHONY: check-spelling
+check-spelling: ## Spell-check docs (requires cspell, or runs in CI)
+	@if command -v cspell >/dev/null 2>&1; then cspell --config cspell.json "**/*.md" --no-summary; \
+	else printf '%s\n' "cspell not found. Install: npm install -g cspell, or let CI run this check." >&2; fi
+
+.PHONY: check-markdown
+check-markdown: ## Lint markdown style (requires markdownlint-cli2, or runs in CI)
+	@if command -v markdownlint-cli2 >/dev/null 2>&1; then markdownlint-cli2 "**/*.md" "#venv" "#.venv" "#node_modules" "#site" "#docs/tmp"; \
+	else printf '%s\n' "markdownlint-cli2 not found. Install: npm install -g markdownlint-cli2, or let CI run this check." >&2; fi
+
+.PHONY: check-docs
+check-docs: check-markdown check-links check-spelling check-codeblocks check-doc-coverage ## Run all doc quality checks (best-effort locally, authoritative in CI)
