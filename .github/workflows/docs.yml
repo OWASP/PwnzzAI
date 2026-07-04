@@ -34,12 +34,6 @@ jobs:
       - name: Build site
         run: mkdocs build
 
-      - name: Upload artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './site'
-
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
@@ -51,6 +45,20 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install mkdocs mkdocs-material
+
+      - name: Build site
+        run: mkdocs build
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
