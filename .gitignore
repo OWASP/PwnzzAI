@@ -29,4 +29,8 @@ catering_sql_lab.db
 # OS files
 .DS_Store
 
+# Generated / local tooling
+.commandcode/
+site/
+
 # Core maintainers only: optional commit-msg in .git/hooks/ (local-only, never pushed).
