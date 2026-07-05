@@ -43,14 +43,14 @@ def start_ollama_service(base_url=None):
 
         # Check exit code (0 means command executed successfully)
         if exit_code == 0:
-            print("✓ Ollama service started successfully")
+            print("[OK] Ollama service started successfully")
             return True
         else:
-            print("✗ Ollama service failed to start")
+            print("[FAIL] Ollama service failed to start")
             return False
 
     except Exception as e:
-        print(f"✗ Error starting Ollama service: {e}")
+        print(f"[FAIL] Error starting Ollama service: {e}")
         return False
 
 
@@ -59,14 +59,14 @@ def check_ollama_running(base_url=OLLAMA_BASE_URL):
     try:
         response = requests.get(f"{base_url}/api/tags", timeout=5)
         if response.status_code == 200:
-            print(f"✓ Ollama is running and accessible at {base_url}")
+            print(f"[OK] Ollama is running and accessible at {base_url}")
             return True
     except requests.exceptions.ConnectionError as e:
-        print(f"✗ Ollama is not running or not accessible at {base_url}: {e}")
+        print(f"[FAIL] Ollama is not running or not accessible at {base_url}: {e}")
     except requests.exceptions.Timeout:
-        print(f"✗ Ollama is not responding at {base_url} (timeout)")
+        print(f"[FAIL] Ollama is not responding at {base_url} (timeout)")
     except Exception as e:
-        print(f"✗ Error connecting to Ollama at {base_url}: {e}")
+        print(f"[FAIL] Error connecting to Ollama at {base_url}: {e}")
 
     return False
 
@@ -106,7 +106,7 @@ def ensure_ollama_running(base_url=OLLAMA_BASE_URL, max_retries=3):
             return True
         print(f"Retry {i+1}/{max_retries}...")
 
-    print("✗ Failed to start Ollama service after multiple attempts")
+    print("[FAIL] Failed to start Ollama service after multiple attempts")
     return False
 
 
@@ -132,11 +132,11 @@ def check_and_pull_model(model_name, base_url=OLLAMA_BASE_URL):
         print("checking model: ", model)
         # First, check if model exists locally
         if is_model_available(model, base_url):
-            print(f"✓ {model} is already available")
+            print(f"[OK] {model} is already available")
             continue
 
         # Model doesn't exist, pull it
-        print(f"✗ {model} not found, pulling...")
+        print(f"[FAIL] {model} not found, pulling...")
 
         try:
             pull_url = f"{base_url}/api/pull"
@@ -167,21 +167,21 @@ def check_and_pull_model(model_name, base_url=OLLAMA_BASE_URL):
 
                     # Check if complete
                     elif 'success' in status.lower() or data.get('status') == 'success':
-                        print(f"✓ {model} pulled successfully!")
+                        print(f"[OK] {model} pulled successfully!")
 
 
                     # Handle errors
                     elif 'error' in data:
-                        print(f"✗ Error: {data['error']}")
+                        print(f"[FAIL] Error: {data['error']}")
                         return False
 
 
 
         except requests.exceptions.Timeout:
-            print(f"✗ Timeout while pulling {model}")
+            print(f"[FAIL] Timeout while pulling {model}")
             return False
         except Exception as e:
-            print(f"✗ Error pulling {model}: {e}")
+            print(f"[FAIL] Error pulling {model}: {e}")
             return False
     return True
 
@@ -207,7 +207,7 @@ def check_and_pull_model_with_progress(model_names, base_url=OLLAMA_BASE_URL):
 
         if is_model_available(model, base_url):
             yield {
-                'status': f'✓ {model} is already available',
+                'status': f'[OK] {model} is already available',
                 'progress': base_progress + progress_per_model
             }
             continue
@@ -266,7 +266,7 @@ def check_and_pull_model_with_progress(model_names, base_url=OLLAMA_BASE_URL):
                     }
                 elif 'success' in status.lower() or data.get('status') == 'success':
                     yield {
-                        'status': f'✓ {model} pulled successfully!',
+                        'status': f'[OK] {model} pulled successfully!',
                         'progress': base_progress + progress_per_model
                     }
                 elif 'pulling manifest' in status.lower():
