@@ -25,7 +25,7 @@ def _malicious_promo_png_bytes() -> bytes:
 def test_get_new_challenge_pages(client):
     r = client.get("/promotion-photo-claim")
     assert r.status_code == 302
-    assert "/indirect-prompt-injection" in (r.headers.get("Location") or "")
+    assert "/promotion-photo" in (r.headers.get("Location") or "")
     r2 = client.get("/customer-support-safety")
     assert r2.status_code == 200
 

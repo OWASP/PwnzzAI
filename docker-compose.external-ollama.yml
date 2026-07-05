@@ -1,6 +1,6 @@
 services:
   pwnzzai-app:
-    image: ${PWNZZAI_IMAGE:-ghcr.io/maryammouzarani2024/pwnzzai:latest}
+    image: ${PWNZZAI_IMAGE:-ghcr.io/owasp/pwnzzai:latest}
     container_name: pwnzzai-shop
     ports:
       - "8080:8080"

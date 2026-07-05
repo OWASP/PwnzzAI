@@ -131,7 +131,7 @@ docker compose down -v
 If you publish the app image under another registry path, override the image name when starting:
 
 ```bash
-PWNZZAI_IMAGE=ghcr.io/your-org/pwnzzai:latest docker compose up -d
+PWNZZAI_IMAGE=ghcr.io/owasp/pwnzzai:latest docker compose up -d
 ```
 
 ### If the default image does not pull (build locally)
