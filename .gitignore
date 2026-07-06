@@ -28,5 +28,6 @@ catering_sql_lab.db
 
 # OS files
 .DS_Store
+*:Zone.Identifier
 
 # Core maintainers only: optional commit-msg in .git/hooks/ (local-only, never pushed).
