@@ -30,4 +30,8 @@ catering_sql_lab.db
 .DS_Store
 *:Zone.Identifier
 
+# Generated / local tooling
+.commandcode/
+site/
+
 # Core maintainers only: optional commit-msg in .git/hooks/ (local-only, never pushed).
