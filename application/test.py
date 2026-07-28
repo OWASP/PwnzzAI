@@ -22,6 +22,7 @@ def _is_local_ollama_url(base_url):
     host = (parsed.hostname or "").lower()
     return host in {"localhost", "127.0.0.1", "::1"}
 
+
 def start_ollama_service(base_url=None):
     """Start Ollama locally only when using localhost mode."""
     if base_url is None:
@@ -57,11 +58,13 @@ def start_ollama_service(base_url=None):
 def check_ollama_running(base_url=OLLAMA_BASE_URL):
     """Check if Ollama service is running"""
     try:
+        print(f"{OLLAMA_BASE_URL}")
         response = requests.get(f"{base_url}/api/tags", timeout=5)
-        print(f"[***] {base_url}\n {response.text}")
+
         if response.status_code == 200:
             print(f"[OK] Ollama is running and accessible at {base_url}")
             return True
+        print(f"[*] {base_url}\n {response.text}")
 
     except requests.exceptions.ConnectionError as e:
         print(f"[FAIL] Ollama is not running or not accessible at {base_url}: {e}")
@@ -97,7 +100,7 @@ def ensure_ollama_running(base_url=OLLAMA_BASE_URL, max_retries=3):
             time.sleep(2)
             if check_ollama_running(base_url):
                 return True
-            print(f"External retry {i+1}/{max_retries}...")
+            print(f"External retry {i + 1}/{max_retries}...")
         print(f"External Ollama at {base_url} is not reachable after retries")
         return False
 
@@ -106,27 +109,27 @@ def ensure_ollama_running(base_url=OLLAMA_BASE_URL, max_retries=3):
         time.sleep(2)
         if check_ollama_running(base_url):
             return True
-        print(f"Retry {i+1}/{max_retries}...")
+        print(f"Retry {i + 1}/{max_retries}...")
 
     print("[FAIL] Failed to start Ollama service after multiple attempts")
     return False
 
 
-
 def is_model_available(model, base_url):
-            try:
-                response = requests.get(f"{base_url}/api/tags")
-                if response.status_code == 200:
-                    models = response.json()
-                    local_models = [model['name'] for model in models.get('models', [])]
-                    print(f"[DEBUG] Looking for '{model}' in available models: {local_models}")
-                    is_available = model in local_models
-                    print(f"[DEBUG] Model '{model}' available: {is_available}")
-                    return is_available
-            except Exception as e:
-                print(f"Error checking models: {e}")
-            return False
-        
+    try:
+        response = requests.get(f"{base_url}/api/tags")
+        if response.status_code == 200:
+            models = response.json()
+            local_models = [model['name'] for model in models.get('models', [])]
+            print(f"[DEBUG] Looking for '{model}' in available models: {local_models}")
+            is_available = model in local_models
+            print(f"[DEBUG] Model '{model}' available: {is_available}")
+            return is_available
+    except Exception as e:
+        print(f"Error checking models: {e}")
+    return False
+
+
 def check_and_pull_model(model_name, base_url=OLLAMA_BASE_URL):
     """Check if model exists locally, pull if not"""
     for model in model_name:
@@ -188,10 +191,7 @@ def check_and_pull_model(model_name, base_url=OLLAMA_BASE_URL):
     return True
 
 
-
-
 def check_and_pull_model_with_progress(model_names, base_url=OLLAMA_BASE_URL):
-    
     # Convert single model name to list for uniform handling
     if isinstance(model_names, str):
         model_names = [model_names]
@@ -251,7 +251,8 @@ def check_and_pull_model_with_progress(model_names, base_url=OLLAMA_BASE_URL):
                     percent = (data['completed'] / data['total']) * 100
                     if percent > last_progress + 5 or percent >= 100:
                         last_progress = percent
-                        model_progress = base_progress + (progress_per_model * 0.1) + (percent / 100 * progress_per_model * 0.8)
+                        model_progress = base_progress + (progress_per_model * 0.1) + (
+                                    percent / 100 * progress_per_model * 0.8)
                         yield {
                             'status': f'Downloading {model}: {percent:.1f}%',
                             'progress': model_progress
@@ -308,3 +309,6 @@ def check_and_pull_model_with_progress(model_names, base_url=OLLAMA_BASE_URL):
         'status': 'Setup complete! All models are ready.',
         'progress': 100
     }
+
+if __name__ == '__main__':
+    check_ollama_running()
