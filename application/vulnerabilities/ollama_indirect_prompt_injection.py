@@ -3,7 +3,13 @@ import sqlite3
 import requests
 import os
 from PIL import Image
-from pyzbar.pyzbar import decode  # QR decoding
+
+try:
+    from pyzbar.pyzbar import decode  # QR decoding
+    PYZBAR_IMPORT_ERROR = None
+except ImportError as import_error:
+    decode = None
+    PYZBAR_IMPORT_ERROR = import_error
 
 
 UPLOAD_FOLDER = "uploads"
@@ -14,6 +20,12 @@ print(f"Folder writable: {os.access(UPLOAD_FOLDER, os.W_OK)}")  # Debug log
 # Decode QR code from an image file
 def decode_qr(file_path: str) -> str:
     try:
+        if decode is None:
+            return (
+                "Error decoding QR: pyzbar/zbar runtime is not available. "
+                "Install zbar and ensure its shared library is discoverable. "
+                f"Details: {PYZBAR_IMPORT_ERROR}"
+            )
         img = Image.open(file_path)
         decoded_objects = decode(img)
         if decoded_objects:
