@@ -1,0 +1,40 @@
+language: "en-US"
+tone_instructions: >-
+  Be concise, evidence-based, and security-first. Lead with exploitable impact,
+  distinguish intentional labs from regressions, and suppress cosmetic feedback.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: true
+  high_level_summary: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "!do-not-coderabbit-review"
+
+  path_filters:
+    - "!**/docs/**"
+    - "!**/tests/**"
+    - "!**/prompts/**"
+    - "!**/.github/**"
+
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        PwnzzAI is deliberately insecure for education. Prioritize security,
+        then correctness, then maintainability. Rank actionable findings as
+        Critical, High, Medium, or Low. Explain the attack path, impact,
+        evidence, and smallest safe remediation. Do not report style-only issues.
+
+    - path: "application/vulnerabilities/**"
+      instructions: |
+        The advertised weakness in each lab is intentional. Do not flag it
+        solely because it exists. Flag unintended or undocumented weakness
+        classes, escape from the lab boundary, exposure of real secrets or data,
+        harmful external side effects, insecure behavior becoming a default
+        outside the lab, broken exploitability, or weakened hardened examples.
+
+chat:
+  auto_reply: false
