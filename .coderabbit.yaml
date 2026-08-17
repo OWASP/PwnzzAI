@@ -10,7 +10,7 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    ignore_title_keywords:
+    labels:
       - "!do-not-coderabbit-review"
 
   path_filters:
