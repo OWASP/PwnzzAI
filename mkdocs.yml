@@ -52,4 +52,6 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Dev Guide: dev-guide.md
-  - Labs: labs.md
+  - Labs:
+      - Lab Manual: labs.md
+      - Misinformation: misinformation.md
