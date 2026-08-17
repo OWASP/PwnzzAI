@@ -17,7 +17,6 @@ reviews:
     - "!**/docs/**"
     - "!**/tests/**"
     - "!**/prompts/**"
-    - "!**/.github/**"
 
 
   path_instructions:
