@@ -8,11 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+# CPU torch first so sentence-transformers does not pull the CUDA wheel (~GB of nvidia-*).
+# Do not pin torch in requirements.txt: host/macOS venvs stay unchanged.
 RUN python -m pip install --upgrade --no-cache-dir pip && \
-    pip install --no-cache-dir \
-    --retries 10 \
-    --timeout 600 \
-    -r requirements.txt
+    pip install --no-cache-dir --retries 10 --timeout 600 \
+      torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --retries 10 --timeout 600 \
+      -r requirements.txt
 
 COPY . .
 
