@@ -12,6 +12,11 @@ RUN python -m pip install --upgrade pip && \
     pip install \
     --retries 10 \
     --timeout 600 \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.7.1 && \
+    pip install \
+    --retries 10 \
+    --timeout 600 \
     -r requirements.txt
 
 COPY . .
@@ -25,5 +30,5 @@ ENV FLASK_APP=main.py
 ENV PYTHONUNBUFFERED=1
 ENV OLLAMA_HOST=http://ollama:11434
 
-# Start Ollama in background, wait for it, then start Flask
-CMD ollama serve > /tmp/ollama.log 2>&1 & sleep 5 && flask run --host=0.0.0.0 --port=8080 --no-reload
+# Ollama runs in its own Compose service or at OLLAMA_HOST.
+CMD ["flask", "run", "--host=0.0.0.0", "--port=8080", "--no-reload"]
