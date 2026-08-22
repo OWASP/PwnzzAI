@@ -23,7 +23,8 @@ EXPOSE 8080
 
 ENV FLASK_APP=main.py
 ENV PYTHONUNBUFFERED=1
+# Compose DNS to the separate ollama service (not installed in this image).
 ENV OLLAMA_HOST=http://ollama:11434
 
-# Start Ollama in background, wait for it, then start Flask
-CMD ollama serve > /tmp/ollama.log 2>&1 & sleep 5 && flask run --host=0.0.0.0 --port=8080 --no-reload
+# Flask only. Ollama runs as compose service ollama/ollama:latest.
+CMD ["flask", "run", "--host=0.0.0.0", "--port=8080", "--no-reload"]
