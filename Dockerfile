@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+# libzbar0: runtime for pyzbar (QR labs). Wheels cover numpy/sklearn/Pillow/faiss; no compiler.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libzbar0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
