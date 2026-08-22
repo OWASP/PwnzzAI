@@ -1,11 +1,21 @@
 name: Run Tests
 
-on: 
-  push:
-    branches: [main]
+on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '**/*.md'
+  workflow_dispatch:
+  workflow_call:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -17,8 +27,12 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v5
-        with: 
+        with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
 
       - name: Install System Dependencies
         run: |
@@ -30,9 +44,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
-          
 
       - name: Run Tests
-        run: pytest -v 
-
-
+        run: pytest -v
