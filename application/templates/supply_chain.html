@@ -248,37 +248,6 @@ class SentimentModel_Bash_Malicious:
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Get the button element
-            const triggerButton = document.getElementById('trigger-model');
-            
-            // Add click event listener for XSS demo button
-            if (triggerButton) {
-                triggerButton.addEventListener('click', function() {
-                    // Show loading message
-                    document.getElementById('vuln-demo-result').innerHTML = 
-                        '<p>Creating an instance of the malicious model...</p>';
-                    
-                    // Make a request to load the model
-                    fetch('/load-malicious-model')
-                        .then(response => response.json())
-                        .then(data => {
-                            // Check if the response contains the JavaScript payload
-                            if (data.js_payload) {
-                                // Execute the JavaScript by injecting it into the page
-                                // In a real supply chain attack, this would happen automatically
-                                const scriptContainer = document.createElement('div');
-                                scriptContainer.innerHTML = data.js_payload;
-                                document.body.appendChild(scriptContainer);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error loading model:', error);
-                            document.getElementById('vuln-demo-result').innerHTML = 
-                                '<div class="alert alert-danger">Error loading the model. Check the console for details.</div>';
-                        });
-                });
-            }
-
             // Add click event listener for bash command execution demo
             const bashButton = document.getElementById('load-bash-model');
             if (bashButton) {
