@@ -10,12 +10,9 @@ on:
   workflow_dispatch:
   workflow_call:
 
-# Do not use github.workflow here: in a reusable workflow it can be the *caller*
-# name, so this group matched "CI + Docker Build & Push" and cancelled GHCR publish
-# after #22 merged. Only cancel overlapping PR test runs, not the parent docker job.
 concurrency:
-  group: run-tests-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: run-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
