@@ -13,9 +13,8 @@ permissions:
   contents: read
   packages: write
 
-# Fixed name so this never shares a group with test.yml's reusable-workflow run.
 concurrency:
-  group: ci-docker-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
