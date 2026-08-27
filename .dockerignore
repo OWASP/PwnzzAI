@@ -56,6 +56,13 @@ docker-compose.yml
 # Documentation
 *.md
 
+# Not needed at runtime (make test-docker bind-mounts tests/ + pytest.ini)
+tests/
+docs/
+deploy/
+scripts/
+.github/
+
 # Testing
 .pytest_cache/
 .coverage
