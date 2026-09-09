@@ -24,6 +24,10 @@
 #   PWNZZAI_POD_STATE_DIR       State dir (default /workspace/.pwnzzai, else ~/.pwnzzai)
 #   PWNZZAI_OLLAMA_PREFIX       Install prefix (default /usr/local, else <state>/ollama)
 #   PWNZZAI_SKIP_MODEL_SMOKE=1  Skip the "generate one token" check after pulling
+#   PWNZZAI_SKIP_MODEL_PULL=1   Pull no models at all — leave the pod serving an empty model
+#                               list and pull later from the PwnzzAI UI ("Setup Ollama",
+#                               which POSTs /api/pull to this pod over OLLAMA_HOST).
+#                               Pair it with PWNZZAI_REQUIRE_MODEL=0 on the app pod.
 #
 # IMPORTANT (provider port exposure): the pod must expose TCP 11434 for the app pod to
 # reach it. On RunPod that means adding 11434 to the pod's exposed TCP ports when you
@@ -234,6 +238,12 @@ smoke_model() {
     pod_log_info "Skipping model smoke test (PWNZZAI_SKIP_MODEL_SMOKE=1)"
     return 0
   fi
+  # Without a pulled model there is nothing to generate with; probing would report a
+  # timeout and mislead the operator into looking for a performance problem.
+  if [[ "${PWNZZAI_SKIP_MODEL_PULL:-0}" == "1" ]]; then
+    pod_log_info "Skipping model smoke test — no model pulled (PWNZZAI_SKIP_MODEL_PULL=1)"
+    return 0
+  fi
   pod_log_info "Smoke-testing generation with ${PRIMARY_MODEL} (one token)"
   local payload
   payload="$(printf '{"model":"%s","prompt":"ping","stream":false,"options":{"num_predict":1}}' "$PRIMARY_MODEL")"
@@ -248,14 +258,23 @@ smoke_model() {
 }
 
 print_next_steps() {
-  local ip
+  local ip models_line require_model_line
   ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  if [[ "${PWNZZAI_SKIP_MODEL_PULL:-0}" == "1" ]]; then
+    models_line="none pre-pulled — pull from the PwnzzAI UI once the app pod is up"
+    # Without this the app deploy aborts on the "model missing on the GPU pod" check.
+    # Carries its own trailing newline so the printed command stays one pasteable block.
+    require_model_line=$'  PWNZZAI_REQUIRE_MODEL=0 \\\n'
+  else
+    models_line="$(model_list | tr '\n' ' ')"
+    require_model_line=""
+  fi
   cat <<EOF
 
 ================================================================================
 GPU pod ready — Ollama is serving on ${OLLAMA_BIND}
 ================================================================================
-  Models     : $(model_list | tr '\n' ' ')
+  Models     : ${models_line}
   Model dir  : ${OLLAMA_MODELS}
   Log        : ${LOGFILE}
   Pod-local  : ${LOCAL_API}${ip:+  (pod IP: http://${ip}:${OLLAMA_PORT})}
@@ -267,7 +286,7 @@ pod (RunPod: "Connect" -> TCP port mappings) and run, from the repo root:
   OLLAMA_HOST=http://<gpu-pod-public-host>:<mapped-port> \\
   OLLAMA_MODEL=${PRIMARY_MODEL} \\
   PWNZZAI_PUBLIC_HOST=<app-pod-public-host> \\
-    ./deploy/pod-deployment/deploy-pod-app.sh
+${require_model_line}    ./deploy/pod-deployment/deploy-pod-app.sh
 
 Verify from the app pod first:
   curl -fsS http://<gpu-pod-public-host>:<mapped-port>/api/tags
@@ -279,8 +298,13 @@ cmd_up() {
   report_gpu
   ensure_ollama_installed
   start_serve
-  pull_models
-  smoke_model
+  if [[ "${PWNZZAI_SKIP_MODEL_PULL:-0}" == "1" ]]; then
+    pod_log_info "PWNZZAI_SKIP_MODEL_PULL=1 — no models pulled; pull them from the PwnzzAI UI."
+    pod_log_info "Labs will fail until a model exists here, so pull before participants start."
+  else
+    pull_models
+    smoke_model
+  fi
   print_next_steps
 }
 
