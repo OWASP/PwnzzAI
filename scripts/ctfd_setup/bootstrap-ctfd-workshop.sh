@@ -11,8 +11,12 @@
 # access the Docker socket (see scripts/ctfd_setup/README.md).
 #
 # Typical .env keys consumed when building the workshop image (see deploy/Dockerfile.pwnzzai-workshop):
-#   SECRET_KEY  GEMINI_API_KEY  GOOGLE_API_KEY  GEMINI_MODEL  MODEL_PROVIDER
+#   SECRET_KEY  GEMINI_API_KEY  GOOGLE_API_KEY  GEMINI_MODEL  LITELLM_MODEL  MODEL_PROVIDER
 #   OLLAMA_HOST  OLLAMA_MODEL  OLLAMA_FALLBACK_MODEL  OPENAI_API_KEY  OPENAI_MODEL
+#
+# Cloud provider selection: the lab route is GEMINI_MODEL (as gemini/...) unless OPENAI_MODEL wins.
+# For OpenAI, set OPENAI_API_KEY + OPENAI_MODEL and leave GEMINI_MODEL unset, or set MODEL_PROVIDER=openai
+# (or LITELLM_MODEL=openai/<model>) to pin OpenAI explicitly.
 #
 # Optional:
 #   PWNZZAI_ROOT=/path/to/PwnzzAI     (default: repository root — two levels above this script)
@@ -273,7 +277,8 @@ dock build \
   --build-arg "SECRET_KEY=${SECRET_KEY:-}" \
   --build-arg "GEMINI_API_KEY=${GEMINI_API_KEY:-}" \
   --build-arg "GOOGLE_API_KEY=${GOOGLE_API_KEY:-}" \
-  --build-arg "GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}" \
+  --build-arg "GEMINI_MODEL=${GEMINI_MODEL:-}" \
+  --build-arg "LITELLM_MODEL=${LITELLM_MODEL:-}" \
   --build-arg "MODEL_PROVIDER=${MODEL_PROVIDER:-auto}" \
   --build-arg "OLLAMA_HOST=${OLLAMA_HOST}" \
   --build-arg "OLLAMA_MODEL=${OLLAMA_MODEL:-mistral:7b}" \
