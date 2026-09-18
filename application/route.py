@@ -2030,10 +2030,13 @@ def upload_qr():
     file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
     file.save(file_path)
     print(f"File saved to: {file_path}")  # Debug log
+    try:
+        qr_text = decode_qr(file_path)
+        print(f"QR decoded: {qr_text}")  # Debug log
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-    qr_text = decode_qr(file_path)
-    print(f"QR decoded: {qr_text}")  # Debug log
-    
     if not qr_text:
         return jsonify({"error": "No QR code detected"}), 400
 
