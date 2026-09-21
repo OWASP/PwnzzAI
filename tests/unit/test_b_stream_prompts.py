@@ -23,6 +23,6 @@ def test_b_stream_renders_secret(stage: int, expected_secret: str):
 def test_all_ten_stages_render():
     for s in range(10):
         level = level_for_escalation_stage(s)
-        secret = LEVEL_TO_SECRET[level]
+        secret = STAGE_TO_SECRET[s]
         out = render_b_stream_system_prompt(s, secret=secret, baseline_level=level)
         assert len(out) > 40
