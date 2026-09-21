@@ -20,7 +20,7 @@ from application.vulnerabilities.ollama_indirect_prompt_injection import decode_
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", os.environ.get("OLLAMA_FALLBACK_MODEL", "mistral:7b"))
 
-SOLVE_PHRASE = "Dust from venus"
+SOLVE_PHRASE = "truffle oil"
 
 
 def extract_packaging_channels(image_path: str) -> dict[str, Any]:

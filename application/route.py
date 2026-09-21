@@ -795,7 +795,12 @@ def data_poisoning_main():
 @application.app.route('/data-poisoning/catering-rag')
 def catering_rag_poisoning_page():
     """Corporate catering vector / RAG poisoning lab (LLM04-adjacent scenario)."""
-    return render_template('catering_rag_poisoning.html')
+    from application.vulnerabilities.catering_rag_lab import UNSAFE_HINT_TOKENS
+
+    return render_template(
+        'catering_rag_poisoning.html',
+        unsafe_hint_tokens=list(UNSAFE_HINT_TOKENS),
+    )
 
 
 @application.app.route('/agentic-tools')
