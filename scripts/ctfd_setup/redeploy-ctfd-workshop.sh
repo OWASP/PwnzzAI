@@ -56,6 +56,10 @@ else
   exit 1
 fi
 
+# shellcheck source=scripts/ctfd_setup/workshop-compose-flags.inc.sh
+source "${PWNZZAI_ROOT}/scripts/ctfd_setup/workshop-compose-flags.inc.sh"
+pwnzzai_set_workshop_compose_flags
+
 log_info "Rebuilding the CTFd image (this can take a minute)..."
 cd "${PWNZZAI_ROOT}/deploy"
 # Force-refresh plugin clone layers on every redeploy while preserving other Docker cache layers.
@@ -63,7 +67,7 @@ DOCKER_CHALLENGES_CACHE_BUSTER="${DOCKER_CHALLENGES_CACHE_BUSTER:-$(date +%s)}"
 log_info "Using DOCKER_CHALLENGES_CACHE_BUSTER=${DOCKER_CHALLENGES_CACHE_BUSTER}"
 CTFD_SECRET_KEY="${CTFD_SECRET_KEY:-}" DOCKER_CHALLENGES_PUBLIC_HOST="${DOCKER_CHALLENGES_PUBLIC_HOST}" \
   DOCKER_CHALLENGES_CACHE_BUSTER="${DOCKER_CHALLENGES_CACHE_BUSTER}" \
-  dc -f docker-compose.workshop.yml build ctfd
+  dc "${PWNZZAI_WORKSHOP_COMPOSE_FLAGS[@]}" build ctfd
 
 log_info "Restarting the CTFd container with the new image..."
 # Ensure dependencies are up: redeploy uses --no-deps for ctfd and otherwise can
@@ -71,17 +75,17 @@ log_info "Restarting the CTFd container with the new image..."
 log_info "Ensuring docker-socket-proxy is running..."
 CTFD_SECRET_KEY="${CTFD_SECRET_KEY:-}" DOCKER_CHALLENGES_PUBLIC_HOST="${DOCKER_CHALLENGES_PUBLIC_HOST}" \
   DOCKER_CHALLENGES_CACHE_BUSTER="${DOCKER_CHALLENGES_CACHE_BUSTER}" \
-  dc -f docker-compose.workshop.yml up -d docker-socket-proxy
+  dc "${PWNZZAI_WORKSHOP_COMPOSE_FLAGS[@]}" up -d docker-socket-proxy
 if [[ "${COMPOSE_PROFILES:-local-ollama}" == *local-ollama* ]]; then
   log_info "Ensuring local shared ollama service is running (profile local-ollama)..."
   CTFD_SECRET_KEY="${CTFD_SECRET_KEY:-}" DOCKER_CHALLENGES_PUBLIC_HOST="${DOCKER_CHALLENGES_PUBLIC_HOST}" \
     DOCKER_CHALLENGES_CACHE_BUSTER="${DOCKER_CHALLENGES_CACHE_BUSTER}" \
-    dc -f docker-compose.workshop.yml up -d ollama
+    dc "${PWNZZAI_WORKSHOP_COMPOSE_FLAGS[@]}" up -d ollama
 fi
 
 CTFD_SECRET_KEY="${CTFD_SECRET_KEY:-}" DOCKER_CHALLENGES_PUBLIC_HOST="${DOCKER_CHALLENGES_PUBLIC_HOST}" \
   DOCKER_CHALLENGES_CACHE_BUSTER="${DOCKER_CHALLENGES_CACHE_BUSTER}" \
-  dc -f docker-compose.workshop.yml up -d --force-recreate --no-deps ctfd
+  dc "${PWNZZAI_WORKSHOP_COMPOSE_FLAGS[@]}" up -d --force-recreate --no-deps ctfd
 
 log_info "Waiting for CTFd to answer on port 8000..."
 if command -v curl >/dev/null 2>&1; then
