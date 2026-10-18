@@ -10,6 +10,28 @@
 </head>
 <body>
 
+    {#
+      CONTENT CORRECTIONS (PwnzzAI working group, Afshin):
+      1. Description now opens with what the lab is; the RAG cross-link moved to the end.
+      2. Replaced "intentionally unsafe SQL" wording: the fragment is quote-escaped, so quote
+         break-out / UNION injection does not work at any tier. The F0 flaw is a tool with no
+         per-user scoping (any fragment matching another username, or %, returns that row).
+      3. OWASP mapping: LLM05 (model text executed as tool calls) plus LLM06 (tool can read more
+         than the caller may), matching docs/labs.md which listed LLM06 only.
+      4. Solve condition corrected: identity is the logged-in user, alice when not logged in;
+         any other user's token counts. Removed the literal token from the page.
+      5. Tier text states what was measured: only F0 leaks through the tool path.
+      6. generated_sql is in the API response but not rendered; pointed readers to DevTools.
+      7. Model guidance matches the compose default (llama3.2:1b) and the missing-model error.
+      8. Hardened section says what it does and does not cover; mitigations expanded.
+      9. Chat opener no longer advertises audits / warehouse batches (no such data exists).
+      Open items raised separately as an issue (require backend/redesign, not content):
+        - F1-F4 cannot be solved through the tools: no fragment passing the F1 filter matches "bob"
+        - "Verify solve" can be passed without the tool path (details: issue #31)
+        - generated_sql, level_name and level_hint are returned but never shown in the UI
+        - a missing Ollama model surfaces as the chat reply "Error: Ollama status 404"
+    #}
+
     {% include 'navbar.html' %}
 
     <main class="container">
@@ -20,12 +42,25 @@
                 <summary class="dropdown-title">Description</summary>
                 <div class="dropdown-content">
                     <section class="section-box">
+                        <h2>When the Model's Words Become Database Queries</h2>
+                        <p>An agentic assistant does more than talk: the application reads its reply, finds tool calls in it, and runs them. In this lab a catering routing assistant can look up drivers' private routing tokens. The server scans every reply for tool lines and turns each one into a SQL query, so whoever steers the model's text steers the query.</p>
+                        <p><strong>Scenario:</strong> You are on the catering operations team during a busy lunch rush. Dispatch asks the assistant for routing details, but a malicious insider wants to pull another teammate’s private routing token to reroute deliveries.</p>
+                        <p><strong>Tools.</strong> The assistant can emit <code>RUN_ROUTE_LOOKUP("…")</code>, <code>LIST_SQL_TABLES()</code>, or <code>RUN_ROUTE_TABLE_LOOKUP("…", "…")</code>. The server runs up to eight of them per reply, wherever they appear, including inside explanations or code blocks. The lookup fragment is placed into <code>WHERE username LIKE '%fragment%'</code>. Quotes in the fragment are escaped, so breaking out of the string or appending a <code>UNION</code> does not work at any tier. The weakness is that the lookup is not limited to the person asking: any fragment that matches another username, or a wildcard such as <code>%</code>, returns that user's row.</p>
+                        <p><strong>Defense tiers F0–F4</strong> add controls one at a time, and each tier keeps the filters of the tiers below it:</p>
+                        <ul>
+                            <li><strong>F0:</strong> no filtering; the fragment reaches the <code>routing_flag</code> table as is.</li>
+                            <li><strong>F1:</strong> rejects SQL keywords, the wildcards <code>%</code> and <code>_</code>, any fragment containing <code>bob</code> (including spaced-out spellings), and fragments with fewer than three letters or digits.</li>
+                            <li><strong>F2:</strong> lookups go to a randomly named copy of the table hidden among decoys; <code>LIST_SQL_TABLES()</code> reveals the names.</li>
+                            <li><strong>F3:</strong> each user's row sits in its own table; plain <code>RUN_ROUTE_LOOKUP</code> is disabled and <code>RUN_ROUTE_TABLE_LOOKUP</code> needs an exact table name.</li>
+                            <li><strong>F4:</strong> F3 plus a character allowlist on the fragment.</li>
+                        </ul>
+                        <p>The tool path leaks another user's token at F0. From F1 upward the filters reject every fragment that could match the other driver, so use those tiers to read the rejection messages and see what each control stops.</p>
+                        <p><strong>Solve:</strong> get another user's routing token (format <code>RT-…</code>) to appear in the assistant's reply together with the tool output, then press <strong>Verify solve</strong>. You act as the user you are logged in as, or as <code>alice</code> when not logged in, so for <code>alice</code> the target is Bob's token.</p>
+                        <p><strong>Seeing the SQL.</strong> Each API response carries a <code>generated_sql</code> array with the queries that ran. The chat does not display it; open your browser's developer tools, go to the Network tab, and inspect the response of <code>/api/catering-sql/chat</code>.</p>
+                        <p><strong>Model notes.</strong> The Free Model tab needs a local model pulled from <a href="{{ url_for('basics') }}">Lab Setup</a>; without one the assistant replies <code>Error: Ollama status 404</code>. The default small model (<code>llama3.2:1b</code>) often writes a raw <code>SELECT</code> statement or a malformed tool line, which the server ignores. Ask it to output only the tool line, retry, or use a larger model such as <code>mistral:7b</code>.</p>
+                        <p>This lab maps to two OWASP Top 10 for LLM risks: <strong>LLM05: Improper Output Handling</strong>, because model text is executed as tool calls without checking it against what the user may do, and <strong>LLM06: Excessive Agency</strong>, because the tool can read every user's data while acting for one user. See <strong>Mitigation Strategies</strong> for a tenant-scoped tool path you can enable to compare behavior after defenses.</p>
                         <p>The <strong>vector / RAG poisoning</strong> counterpart for the same fictional catering org is on
                             <a href="{{ url_for('catering_rag_poisoning_page') }}">Data and Model Poisoning → RAG poisoning lab</a>.</p>
-                        <p><strong>Scenario:</strong> You are on the catering operations team during a busy lunch rush. Dispatch asks the assistant for routing details, but a malicious insider wants to pull another teammate’s private routing token to reroute deliveries. The assistant can emit tool lines such as <code>RUN_ROUTE_LOOKUP("…")</code>, <code>LIST_SQL_TABLES()</code>, or <code>RUN_ROUTE_TABLE_LOOKUP("…", "…")</code>; the server builds SQL from those lines (intentionally unsafe at low tiers).</p>
-                        <p>Defense tiers F0–F4 escalate discovery and filtering (F1 bans LIKE wildcards, bob variants, and very short fragments; those filters are inherited by higher tiers). Each API response includes a <code>generated_sql</code> array showing what ran.</p>
-                        <p><strong>Solve:</strong> while logged in as <code>alice</code>, get Bob’s routing token <code>RT-BOB9F2</code> to appear in the combined model output. Use a capable local model (for example <code>mistral:7b</code>); very small models may garble the required tool line.</p>
-                        <p>This lab illustrates insecure handling of model-generated “tool” text that becomes SQL—aligned with <strong>LLM05: Improper Output Handling</strong> when that output drives privileged backends. See <strong>Mitigation Strategies</strong> for a tenant-scoped tool path you can enable to compare behavior after defenses.</p>
                     </section>
                 </div>
             </details>
@@ -114,7 +149,7 @@
                 <div class="dropdown-content">
                     <section class="section-box">
                         <h3>Hardened tool path (tenant scoped)</h3>
-                        <p>With <strong>hardened</strong> enabled, the server ignores attacker-controlled SQL fragments for cross-user routing tokens and returns only the current user’s own row. Use this after you have tried the exploit in <strong>Demonstration</strong> so the interactive section stays focused on the vulnerable path.</p>
+                        <p>With <strong>hardened</strong> enabled, the server ignores the fragment the model supplies and returns only the current user’s own row, whatever the model asked for. Only <code>RUN_ROUTE_LOOKUP</code> is honored in this mode; <code>LIST_SQL_TABLES()</code> and <code>RUN_ROUTE_TABLE_LOOKUP</code> are not executed. The authorization decision is made by the server, not by the prompt or the model. Use this after you have tried the exploit in <strong>Demonstration</strong> so the interactive section stays focused on the vulnerable path.</p>
                         <div class="form-group">
                             <label><input type="checkbox" id="catering-sql-hardened-ollama"> Hardened tool path — Free model tab</label>
                         </div>
@@ -122,6 +157,17 @@
                             <label><input type="checkbox" id="catering-sql-hardened-cloud"> Hardened tool path — {{ llm_ui.tab_cloud_title }}</label>
                         </div>
                         <p class="help-text"><small>Toggling hardened resets the corresponding chat thread.</small></p>
+
+                        <h3 style="margin-top:1rem;">Mitigation checklist</h3>
+                        <ul>
+                            <li><strong>Authorize in the tool, not in the prompt:</strong> derive the tenant or user from the authenticated session and apply it inside every tool, regardless of the arguments the model sends.</li>
+                            <li><strong>Structured tool calls:</strong> use the provider's function-calling interface with a strict argument schema instead of pattern-matching tool names in free text, so prose or quoted examples are never executed.</li>
+                            <li><strong>Parameterized queries only:</strong> bind model-supplied values as parameters and never let the model choose table names, columns, or operators.</li>
+                            <li><strong>Least privilege:</strong> give the tool's database role read access to the caller's rows only (views or row-level security), so a bad query has nothing extra to return.</li>
+                            <li><strong>Do not rely on blocklists:</strong> keyword and name filters such as F1 are easy to get wrong and hide the missing authorization check rather than fix it.</li>
+                            <li><strong>Check results before returning them:</strong> drop rows that do not belong to the caller and alert on secrets in outbound text.</li>
+                            <li><strong>Limit and log tool use:</strong> cap tool calls per turn and record each call with the user, arguments, and executed SQL.</li>
+                        </ul>
 
                         <h3 style="margin-top:1rem;">Defense Playbook (Incident Response)</h3>
                         <p><strong>Detect:</strong> assistant replies containing foreign <code>RT-…</code> tokens; SQL logs showing broad LIKE patterns from chat traffic.</p>
@@ -138,7 +184,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const LLM_UI_DEFAULT = {{ llm_ui | tojson }};
-            const SQL_CHAT_OPENER = 'Routing desk: you are on catering operations. Ask about routes, audits, driver tokens, or warehouse batches — the assistant may emit RUN_ROUTE_LOOKUP("…") lines when it answers.';
+            const SQL_CHAT_OPENER = 'Routing desk: you are on catering operations. Ask about a driver\'s routing token — the assistant answers by emitting tool lines such as RUN_ROUTE_LOOKUP("…"), which the server runs.';
 
             const state = {
                 ollama: { apiHistory: [], lastResponse: null },
