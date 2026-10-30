@@ -7,7 +7,7 @@
 | 1 | Learning to get weights from a model | [/model-theft](#model-theft-attack) | [LLM10:2025 \- Unbounded Consumption](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/) |
 | 2 | Swapping negative and positive data | [/data-poisoning](#model-theft-attack) | [LLM04:2025 \- Data and Model Poisoning](https://genai.owasp.org/llmrisk/llm042025-data-and-model-poisoning/) |
 | 3 | Adding wrong data in vector database | [/catering-rag](#model-theft-attack) | [LLM08:2025 \- Vector and Embedding Weaknesses](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/) |
-| 4 | Libraries that can cause vulnerabilities | [/supply-chain](#model-theft-attack) | [LLM03:2025 \- Supply Chain Vulnerabilities](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm032025-supply-chain-vulnerabilities/) |
+| 4 | Libraries that can cause vulnerabilities | [/supply-chain](#supply-chain-vulnerability) | [LLM03:2025 \- Supply Chain Vulnerabilities](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm032025-supply-chain-vulnerabilities/) |
 | 5 | Exploring SQL injection in LLM apps | [/insecure-plugin](#model-theft-attack) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
 | 6 | Prompt injection | [/direct-prompt-injection](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
 | 7 | Prompt injection with guard rails | [/direct-prompt-injection/guardrail-ladder](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
@@ -114,13 +114,13 @@ Offers a **Hardened retrieval** run option that restricts the RAG system to trus
 
 Description: **Analyze how insecure third-party dependencies and libraries can introduce hidden security flaws into an AI application.** 
 
-**Objective:** Execute code via model file.
+**Objective:** Load an untrusted model file so its hidden payload runs on deserialization, then confirm that hardened (weights-only) loading neutralises it.
 
 **Threat Model:** Elevation of Privilege: Achieving code execution via deserialization.
 
 **Difficulty Rating:** Advanced
 
-**Hint:** Look at the malicious code snippets for XSS or Bash models; loading the whole object via torch.load() or pickle automatically triggers the underlying Python script.
+**Hint:** The XSS and Bash demos put their payload in `__init__`, so they fire when the server *constructs* the model (for XSS, view the page source of the demo page); their saved `.pkl` files do not re-run on load, because pickle does not call `__init__`. The **Win Condition: Load-Time Deserialization** panel uses a model whose payload sits in `__reduce__`, which pickle *does* call while restoring a file. Save the tampered model, then with **Hardened mode** off click **Load model file**: the unsafe `pickle.load` runs the payload and the lab is solved. Turn **Hardened mode** on and load again — the restricted (weights-only style) loader refuses the payload, so it is not solved. The bundled payload only writes a marker file; a real attacker would return `(os.system, (...))` from `__reduce__`, which is what ModelScan / picklescan flag.
 
 ![Supply Chain Vulnerability](assets/images/labs/image6.png)
 
