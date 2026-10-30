@@ -114,13 +114,13 @@ Offers a **Hardened retrieval** run option that restricts the RAG system to trus
 
 Description: **Analyze how insecure third-party dependencies and libraries can introduce hidden security flaws into an AI application.** 
 
-**Objective:** Trigger the code hidden in a tampered third-party model class, then examine the saved model files with a scanner.
+**Objective:** Load an untrusted model file so its hidden payload runs on deserialization, then confirm that hardened (weights-only) loading neutralises it.
 
 **Threat Model:** Elevation of Privilege: Achieving code execution via deserialization.
 
 **Difficulty Rating:** Advanced
 
-**Hint:** Look at the malicious code snippets for the XSS and Bash models: both payloads sit in `__init__`, so creating the model is enough, no prediction needed. For XSS, view the page source of the demo page. The saved .pkl files do not re-run the payload when loaded, since pickle does not call `__init__`; a real attack would use `__reduce__`.
+**Hint:** The XSS and Bash demos put their payload in `__init__`, so they fire when the server *constructs* the model (for XSS, view the page source of the demo page); their saved `.pkl` files do not re-run on load, because pickle does not call `__init__`. The **Win Condition: Load-Time Deserialization** panel uses a model whose payload sits in `__reduce__`, which pickle *does* call while restoring a file. Save the tampered model, then with **Hardened mode** off click **Load model file**: the unsafe `pickle.load` runs the payload and the lab is solved. Turn **Hardened mode** on and load again — the restricted (weights-only style) loader refuses the payload, so it is not solved. The bundled payload only writes a marker file; a real attacker would return `(os.system, (...))` from `__reduce__`, which is what ModelScan / picklescan flag.
 
 ![Supply Chain Vulnerability](assets/images/labs/image6.png)
 
