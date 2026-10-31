@@ -5,20 +5,20 @@
 | Lab No. | Lab Description  | URL | OWASP Top 10 for LLM Vulnerability |
 | :---- | :---- | :---- | :---- |
 | 1 | Learning to get weights from a model | [/model-theft](#model-theft-attack) | [LLM10:2025 \- Unbounded Consumption](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/) |
-| 2 | Swapping negative and positive data | [/data-poisoning](#model-theft-attack) | [LLM04:2025 \- Data and Model Poisoning](https://genai.owasp.org/llmrisk/llm042025-data-and-model-poisoning/) |
-| 3 | Adding wrong data in vector database | [/catering-rag](#model-theft-attack) | [LLM08:2025 \- Vector and Embedding Weaknesses](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/) |
-| 4 | Libraries that can cause vulnerabilities | [/supply-chain](#model-theft-attack) | [LLM03:2025 \- Supply Chain Vulnerabilities](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm032025-supply-chain-vulnerabilities/) |
-| 5 | Exploring SQL injection in LLM apps | [/insecure-plugin](#model-theft-attack) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
-| 6 | Prompt injection | [/direct-prompt-injection](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
-| 7 | Prompt injection with guard rails | [/direct-prompt-injection/guardrail-ladder](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
-| 8 | Indirect prompt injection using QR codes  | [/indirect-prompt-injection\#qrcode](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
-| 9 | Indirect prompt injection using images | [/promotion-photo](#model-theft-attack) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
-| 10 | Simulating a DoS attack | [/dos-attack](#model-theft-attack) | [LLM10:2025 \- Unbounded Consumption](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/) |
-| 11 | Sensitive info | [/sensitive-info](#model-theft-attack) | [LLM02:2025 \- Sensitive Information Disclosure](https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/) |
-| 12 | Excessive agency | [/excessive-agency](#model-theft-attack) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
-| 13 | Misinformation | [/misinformation](#model-theft-attack) | [LLM09:2025 \- Misinformation](https://genai.owasp.org/llmrisk/llm092025-misinformation/) |
-| 14 | Customer support safety | [/customer-support-safety](#model-theft-attack) | [LLM01:2025 \- Prompt Injection / Social Engineering](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
-| 15 | Agentic tools | [/agentic-tools](#model-theft-attack) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
+| 2 | Swapping negative and positive data | [/data-poisoning](#data-and-model-poisoning) | [LLM04:2025 \- Data and Model Poisoning](https://genai.owasp.org/llmrisk/llm042025-data-and-model-poisoning/) |
+| 3 | Adding wrong data in vector database | [/catering-rag](#rag-poisoning) | [LLM08:2025 \- Vector and Embedding Weaknesses](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/) |
+| 4 | Libraries that can cause vulnerabilities | [/supply-chain](#supply-chain-vulnerability) | [LLM03:2025 \- Supply Chain Vulnerabilities](https://genai.owasp.org/llmrisk/llm032025-supply-chain-vulnerabilities/) |
+| 5 | Exploring SQL injection in LLM apps | [/insecure-plugin](#improper-output-handling) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
+| 6 | Prompt injection | [/direct-prompt-injection](#direct-prompt-injection-system-prompt-leakage) | [LLM01:2025 \- Prompt Injection](https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 7 | Prompt injection with guard rails | [/direct-prompt-injection/guardrail-ladder](#guardrail-ladder-direct-prompt-injection) | [LLM01:2025 \- Prompt Injection](https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 8 | Indirect prompt injection using QR codes  | [/indirect-prompt-injection\#qrcode](#indirect-prompt-injection) | [LLM01:2025 \- Prompt Injection](https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 9 | Indirect prompt injection using images | [/promotion-photo](#promotion-photo) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
+| 10 | Simulating a DoS attack | [/dos-attack](#unbounded-consumption) | [LLM10:2025 \- Unbounded Consumption](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/) |
+| 11 | Sensitive info | [/sensitive-info](#sensitive-information-disclosure) | [LLM02:2025 \- Sensitive Information Disclosure](https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/) |
+| 12 | Excessive agency | [/excessive-agency](#excessive-agency) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
+| 13 | Misinformation | [/misinformation](#misinformation) | [LLM09:2025 \- Misinformation](https://genai.owasp.org/llmrisk/llm092025-misinformation/) |
+| 14 | Customer support safety | [/customer-support-safety](#when-a-support-bot-disparages-its-own-brand) | [LLM01:2025 \- Prompt Injection / Social Engineering](https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 15 | Agentic tools | [/agentic-tools](#agentic-sql-routing) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
 
 ## Welcome to PwnzzAI
 
