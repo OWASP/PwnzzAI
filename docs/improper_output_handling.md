@@ -236,7 +236,7 @@ The lab's vulnerable implementation is designed to accept SQL metacharacters ins
 For example, the lab UI itself documents this pattern:
 
 ```text
-What's the price of a pizza' UNION SELECT name, price FROM pizza --
+What's the price of a " foo' UNION SELECT name, price FROM pizza --" ?
 ```
 
 The important part is not the exact payload. It is the data flow:
@@ -248,12 +248,12 @@ LLM function argument
         ↓
 pizza_type
         ↓
-f"SELECT ... LIKE '%{pizza}%'"
+f"SELECT ... LIKE '%foo' union select name, price...'"
         ↓
 SQL syntax controlled by the attacker
 ```
 
-Once the model places the supplied value into the function argument, the vulnerable plugin turns that value into part of the SQL statement.
+Once the model places the supplied value into the function argument, the vulnerable plugin turns that value into part of the SQL statement. In this example, the payload will return all the names and prices from the pizza table.
 
 ### Step 5 — Test for data beyond pizza prices
 
