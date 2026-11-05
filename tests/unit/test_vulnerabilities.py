@@ -287,3 +287,38 @@ class TestVulnerabilityHelpers:
             model_data = data_poisoning.create_new_model_with_poisoned_data(mixed_comments)
             assert 'vocabulary_size' in model_data
             assert model_data['vocabulary_size'] > 0
+
+
+class TestSupplyChainDeserialization:
+    """Tests for the load-time __reduce__ payload and its win condition."""
+
+    def test_evaluate_solve_matrix(self):
+        from application.vulnerabilities.supply_chain import evaluate_supply_chain_solve
+        # Solve only when the payload ran AND the unsafe loader was used.
+        assert evaluate_supply_chain_solve(payload_executed=True, hardened=False)['solved'] is True
+        assert evaluate_supply_chain_solve(payload_executed=True, hardened=True)['solved'] is False
+        assert evaluate_supply_chain_solve(payload_executed=False, hardened=False)['solved'] is False
+
+    def test_construction_does_not_fire_payload(self):
+        """Building the object must not run the payload; only loading the file does."""
+        from application.vulnerabilities import supply_chain as sc
+        token = 'unit-construct-check'
+        marker = sc._proof_path(token)
+        if os.path.exists(marker):
+            os.remove(marker)
+        sc.SentimentModel_reduce_malicious(token=token)
+        assert not os.path.exists(marker)
+
+    def test_reduce_payload_fires_on_unsafe_load_only(self):
+        from application.vulnerabilities import supply_chain as sc
+        saved = sc.save_reduce_malicious_model()
+        assert saved['success'] is True
+
+        unsafe = sc.load_saved_model(hardened=False)
+        assert unsafe['payload_executed'] is True
+        assert unsafe['solved'] is True
+
+        hardened = sc.load_saved_model(hardened=True)
+        assert hardened['payload_executed'] is False
+        assert hardened['blocked'] is True
+        assert hardened['solved'] is False
