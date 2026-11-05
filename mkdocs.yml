@@ -55,3 +55,4 @@ nav:
   - Labs:
       - Lab Manual: labs.md
       - Misinformation: misinformation.md
+      - Improper Output Handling: improper_output_handling.md
