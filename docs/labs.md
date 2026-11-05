@@ -19,6 +19,20 @@
 | 13 | Misinformation | [/misinformation](#misinformation) | [LLM09:2025 \- Misinformation](https://genai.owasp.org/llmrisk/llm092025-misinformation/) |
 | 14 | Customer support safety | [/customer-support-safety](#when-a-support-bot-disparages-its-own-brand) | [LLM01:2025 \- Prompt Injection / Social Engineering](https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
 | 15 | Agentic tools | [/agentic-tools](#agentic-sql-routing) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
+| 2 | Swapping negative and positive data | [/data-poisoning](#model-theft-attack) | [LLM04:2025 \- Data and Model Poisoning](https://genai.owasp.org/llmrisk/llm042025-data-and-model-poisoning/) |
+| 3 | Adding wrong data in vector database | [/catering-rag](#model-theft-attack) | [LLM08:2025 \- Vector and Embedding Weaknesses](https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/) |
+| 4 | Libraries that can cause vulnerabilities | [/supply-chain](#supply-chain-vulnerability) | [LLM03:2025 \- Supply Chain Vulnerabilities](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm032025-supply-chain-vulnerabilities/) |
+| 5 | Exploring SQL injection in LLM apps | [/insecure-plugin](#model-theft-attack) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
+| 6 | Prompt injection | [/direct-prompt-injection](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 7 | Prompt injection with guard rails | [/direct-prompt-injection/guardrail-ladder](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 8 | Indirect prompt injection using QR codes  | [/indirect-prompt-injection\#qrcode](#model-theft-attack) | [LLM01:2025 \- Prompt Injection](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 9 | Indirect prompt injection using images | [/promotion-photo](#model-theft-attack) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/) |
+| 10 | Simulating a DoS attack | [/dos-attack](#model-theft-attack) | [LLM10:2025 \- Unbounded Consumption](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/) |
+| 11 | Sensitive info | [/sensitive-info](#model-theft-attack) | [LLM02:2025 \- Sensitive Information Disclosure](https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/) |
+| 12 | Excessive agency | [/excessive-agency](#model-theft-attack) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
+| 13 | Misinformation | [/misinformation](#model-theft-attack) | [LLM09:2025 \- Misinformation](https://genai.owasp.org/llmrisk/llm092025-misinformation/) |
+| 14 | Customer support safety | [/customer-support-safety](#model-theft-attack) | [LLM01:2025 \- Prompt Injection / Social Engineering](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
+| 15 | Agentic tools | [/agentic-tools](#agentic-sql-routing) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/), [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
 
 ## Welcome to PwnzzAI
 
@@ -114,13 +128,13 @@ Offers a **Hardened retrieval** run option that restricts the RAG system to trus
 
 Description: **Analyze how insecure third-party dependencies and libraries can introduce hidden security flaws into an AI application.** 
 
-**Objective:** Execute code via model file.
+**Objective:** Trigger the code hidden in a tampered third-party model class, then examine the saved model files with a scanner.
 
 **Threat Model:** Elevation of Privilege: Achieving code execution via deserialization.
 
 **Difficulty Rating:** Advanced
 
-**Hint:** Look at the malicious code snippets for XSS or Bash models; loading the whole object via torch.load() or pickle automatically triggers the underlying Python script.
+**Hint:** Look at the malicious code snippets for the XSS and Bash models: both payloads sit in `__init__`, so creating the model is enough, no prediction needed. For XSS, view the page source of the demo page. The saved .pkl files do not re-run the payload when loaded, since pickle does not call `__init__`; a real attack would use `__reduce__`.
 
 ![Supply Chain Vulnerability](assets/images/labs/image6.png)
 
@@ -320,17 +334,17 @@ Features a toggle for **Guarded mode**, which swaps a vulnerable, empathetic sys
 
 [http://localhost:8080/agentic-tools](http://localhost:8080/agentic-tools)
 
-Description: **Learn how to secure the connection between LLMs and external software tools, preventing unauthorized system modification.**
+Description: **Learn how model-generated tool calls that the server runs as database queries can expose another user's data, and how to scope tools to the caller.**
 
-**Objective:** Secure external tool connection.
+**Objective:** Make the routing assistant return another user's private routing token, then compare with the hardened tool path.
 
-**Threat Model:** Tampering: Using tools for unauthorized data access.
+**Threat Model:** Elevation of Privilege: Using the assistant's tools to read data beyond the user's own rights.
 
 **Difficulty Rating:** Advanced
 
-**Hint:** While logged in as alice, formulate tool instructions like LIST\_SQL\_TABLES() or RUN\_ROUTE\_LOOKUP("…") to extract Bob's private routing token RT-BOB9F2 in the combined output.
+**Hint:** You act as the user you are logged in as (alice when not logged in). Start at F0 and get the assistant to emit a RUN\_ROUTE\_LOOKUP("…") line whose fragment matches the other driver's username; the token (format RT-…) appears in the tool output. Small local models often answer with raw SQL instead, so ask for the tool line only and retry.
 
-This lab utilizes **Defense Tiers F0 through F4**. The tiers escalate database discovery and filtering restrictions. For example, F0 allows raw SQL LIKE queries, while F4 enforces strict fragment allowlists and split tables.
+This lab utilizes **Defense Tiers F0 through F4**. The tiers escalate database discovery and filtering restrictions. F0 passes the model's fragment straight into a LIKE lookup; F1 adds keyword, wildcard, and name filters; F2 moves the data to a randomly named table found with LIST\_SQL\_TABLES(); F3 splits the data into per-user tables queried with RUN\_ROUTE\_TABLE\_LOOKUP("…", "…"); F4 adds a strict fragment allowlist. Only F0 leaks through the tools; use F1 to F4 to study what each control rejects. The executed queries are returned in the `generated_sql` field of the `/api/catering-sql/chat` response (visible in the browser's Network tab).
 
 ![Agentic Tools](assets/images/labs/image17.png)
 
