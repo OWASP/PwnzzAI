@@ -18,7 +18,7 @@
 | 12 | Excessive agency | [/excessive-agency](#model-theft-attack) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
 | 13 | Misinformation | [/misinformation](#model-theft-attack) | [LLM09:2025 \- Misinformation](https://genai.owasp.org/llmrisk/llm092025-misinformation/) |
 | 14 | Customer support safety | [/customer-support-safety](#model-theft-attack) | [LLM01:2025 \- Prompt Injection / Social Engineering](https://www.google.com/search?q=https://genai.owasp.org/llmrisk/llm012025-prompt-injection/) |
-| 15 | Agentic tools | [/agentic-tools](#model-theft-attack) | [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
+| 15 | Agentic tools | [/agentic-tools](#agentic-sql-routing) | [LLM05:2025 \- Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/), [LLM06:2025 \- Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/) |
 
 ## Welcome to PwnzzAI
 
@@ -320,17 +320,17 @@ Features a toggle for **Guarded mode**, which swaps a vulnerable, empathetic sys
 
 [http://localhost:8080/agentic-tools](http://localhost:8080/agentic-tools)
 
-Description: **Learn how to secure the connection between LLMs and external software tools, preventing unauthorized system modification.**
+Description: **Learn how model-generated tool calls that the server runs as database queries can expose another user's data, and how to scope tools to the caller.**
 
-**Objective:** Secure external tool connection.
+**Objective:** Make the routing assistant return another user's private routing token, then compare with the hardened tool path.
 
-**Threat Model:** Tampering: Using tools for unauthorized data access.
+**Threat Model:** Elevation of Privilege: Using the assistant's tools to read data beyond the user's own rights.
 
 **Difficulty Rating:** Advanced
 
-**Hint:** While logged in as alice, formulate tool instructions like LIST\_SQL\_TABLES() or RUN\_ROUTE\_LOOKUP("…") to extract Bob's private routing token RT-BOB9F2 in the combined output.
+**Hint:** You act as the user you are logged in as (alice when not logged in). Start at F0 and get the assistant to emit a RUN\_ROUTE\_LOOKUP("…") line whose fragment matches the other driver's username; the token (format RT-…) appears in the tool output. Small local models often answer with raw SQL instead, so ask for the tool line only and retry.
 
-This lab utilizes **Defense Tiers F0 through F4**. The tiers escalate database discovery and filtering restrictions. For example, F0 allows raw SQL LIKE queries, while F4 enforces strict fragment allowlists and split tables.
+This lab utilizes **Defense Tiers F0 through F4**. The tiers escalate database discovery and filtering restrictions. F0 passes the model's fragment straight into a LIKE lookup; F1 adds keyword, wildcard, and name filters; F2 moves the data to a randomly named table found with LIST\_SQL\_TABLES(); F3 splits the data into per-user tables queried with RUN\_ROUTE\_TABLE\_LOOKUP("…", "…"); F4 adds a strict fragment allowlist. Only F0 leaks through the tools; use F1 to F4 to study what each control rejects. The executed queries are returned in the `generated_sql` field of the `/api/catering-sql/chat` response (visible in the browser's Network tab).
 
 ![Agentic Tools](assets/images/labs/image17.png)
 
