@@ -207,11 +207,7 @@ cursor.execute(query, (f"%{pizza}%",))
 
 In this lab, this would remediate our vulnerability. However, different source-to-sinks will require the appropriate control that separates syntax and data.  
 
-**Constrain the function's business input.** If the function is supposed to retrieve the price of a known pizza, validate against the application's actual pizza records or a strict identifier rather than accepting arbitrary SQL-like text.
-
-**Use a narrow function contract.** The model should receive the smallest capability required for the task. A price lookup should not expose a general-purpose database query interface.
-
-**Allowlist functions.** If detailing with multiple functions or tools, validate against permitted allowlist that can be invoked prior to calls. 
+**Restrict and limit tool capabilities.** Expose only well-scoped and necessary functions for the task. Allowlist permitted functions and validate their arguments against expected business inputs rather than accepting arbitrary text.
 
 **Monitor the tool boundary.** Log the user request, selected tool, arguments, authorization decision, execution result category, and errors. Do not log secrets or unnecessary sensitive data.
 
