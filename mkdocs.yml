@@ -1,57 +1,83 @@
-site_name: PwnzzAI Documentation
-site_description: Documentation for the PwnzzAI vulnerable pizza shop - AI security training platform
-site_url: https://owasp.org/PwnzzAI/
+site_name: PwnzzAI Shop
+site_description: "The Vulnerable Pizza Shop — AI Security Education Platform"
+site_url: https://owasp.github.io/PwnzzAI
+repo_url: https://github.com/OWASP/PwnzzAI
+repo_name: OWASP/PwnzzAI
+edit_uri: blob/main/docs/
 
 theme:
   name: material
-  logo: assets/images/logo.png
-  favicon: assets/images/favicon.png
+  logo: owasp.png
+  favicon: owasp.png
   palette:
-    - scheme: default
-      primary: orange
-      accent: orange
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: orange
-      accent: orange
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+    scheme: default
+    primary: red
+    accent: orange
   features:
-    - navigation.tabs
-    - navigation.sections
+    - navigation.instant
+    - navigation.tracking
     - navigation.expand
-    - navigation.top
-    - search.suggest
-    - search.highlight
+    - navigation.indexes
     - content.code.copy
-    - content.code.annotate
+    - content.tabs.link
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_bases: true
+            heading_level: 3
 
 markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - tables
-  - attr_list
-  - md_in_html
+  - pymdownx.details
+  - admonition
   - toc:
       permalink: true
 
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Dev Guide: dev-guide.md
+  - Home: README.md
+  - Architecture:
+    - architecture/overview.md
+    - architecture/data-flow.md
+    - architecture/threat-model.md
+  - Developer Guide:
+    - developer/getting-started.md
+    - developer/codebase-map.md
+    - developer/api-reference.md
+    - developer/api-modules.md
+    - developer/adding-features.md
   - Labs:
-      - Lab Manual: labs.md
-      - Misinformation: misinformation.md
+    - labs/overview.md
+    - labs/lab-format.md
+    - labs/scenario-list.md
+  - Quality Assurance:
+    - quality-assurance/testing-guide.md
+    - quality-assurance/security-checks.md
+  - Operations:
+    - ops/docker-orchestration.md
+    - ops/env-variables.md
+    - ops/cloud-setup.md
+    - ops/troubleshooting.md
+  - Security:
+    - security/disclosure.md
+    - security/usage-policy.md
+    - security/data-privacy.md
+  - Community:
+    - community/contributing.md
+    - community/doc-standards.md
+  - Releases:
+    - releases/CHANGELOG.md
+    - releases/ROADMAP.md

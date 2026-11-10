@@ -13,6 +13,9 @@ tmp/
 docs/tmp/
 CTFd-Docker-Challenges/
 
+# MkDocs build output
+site/
+
 # Database
 instance/
 uploads/
@@ -33,5 +36,8 @@ catering_sql_lab.db
 # Generated / local tooling
 .commandcode/
 site/
+
+# Command Code (AI coding assistant state)
+.commandcode/
 
 # Core maintainers only: optional commit-msg in .git/hooks/ (local-only, never pushed).

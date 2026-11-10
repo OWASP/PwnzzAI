@@ -12,3 +12,9 @@ exclude = [
 [tool.ruff.lint]
 # CI workflow ignores these; keep aligned.
 ignore = ["E402", "F401", "F841"]
+
+[tool.pytest-codeblocks]
+# Only validate Python fenced code blocks; skip bash/sh blocks.
+# Note: the `languages` option is not supported in pytest-codeblocks 0.16.x.
+# Only Python blocks are validated. Shell blocks are silently skipped on CI
+# (bash available) and fail gracefully on Windows.

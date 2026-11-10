@@ -1,0 +1,87 @@
+name: Documentation Quality
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "*.md"
+      - "tests/README.md"
+      - "scripts/*.md"
+      - "scripts/check-*.py"
+      - ".github/workflows/docs-quality.yml"
+      - ".markdownlint-cli2.yaml"
+      - "cspell.json"
+      - "lychee.toml"
+      - "requirements-test.txt"
+      - "pytest.ini"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - "tests/README.md"
+      - "scripts/*.md"
+      - "scripts/check-*.py"
+      - ".github/workflows/docs-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+            !venv/**
+            !.venv/**
+            !node_modules/**
+            !site/**
+            !docs/tmp/**
+
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check external links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config lychee.toml --no-progress .
+          fail: true
+          jobSummary: true
+
+  spell-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check spelling
+        uses: streetsidesoftware/cspell-action@v6
+        with:
+          config: cspell.json
+          files: "**/*.md"
+          inline: error
+          incremental_files_only: false
+          strict: true
+
+  validate-codeblocks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate Python code blocks in markdown
+        run: python3 scripts/check-codeblocks.py
+
+  check-doc-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check documentation covers all routes and modules
+        run: python3 scripts/check-doc-coverage.py

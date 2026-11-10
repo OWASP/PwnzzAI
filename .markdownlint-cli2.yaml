@@ -1,0 +1,41 @@
+# Markdownlint configuration for PwnzzAI docs
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+# Allow inline HTML (needed for <img>, <a>, <video> embeds)
+MD033: false
+
+# Allow line length (URLs and table rows exceed 80 chars)
+MD013: false
+
+# Allow duplicate headings (labs reuse "Overview", "Setup")
+MD024: false
+
+# Allow bare URLs without angle brackets
+MD034: false
+
+# Allow emphasis used instead of heading
+MD036: false
+
+# Allow trailing punctuation in headings ("Why?")
+MD026: false
+
+# Allow first line not being H1
+MD041: false
+
+# Allow code blocks without language spec
+MD040: false
+
+# Allow dollar signs in code blocks (command examples)
+MD014: false
+
+# Allow spaces after hash for atx-style headings
+MD019: false
+MD021: false
+
+# Allow underscore in filenames (doc_standards.md)
+MD045: false
+
+# Allow indented code blocks (some legacy)
+MD046: false
