@@ -230,17 +230,23 @@ class TestVulnerabilityPages:
         assert response.status_code == 200
 
     def test_direct_prompt_injection_nav_hierarchy_and_deep_links(self, client):
-        """DPI appears under a nav group with Baseline and Guardrail ladder hash links."""
+        """DPI nav exposes Baseline and Guardrail ladder as separate routes."""
         response = client.get('/direct-prompt-injection')
         assert response.status_code == 200
         html = response.data.decode()
         assert 'id="dpi-lab"' in html
-        assert '/direct-prompt-injection#baseline' in html
-        assert '/direct-prompt-injection#guardrail-ladder' in html
-        assert 'data-dpi-mode="baseline"' in html
-        assert 'data-dpi-mode="escalation"' in html
+        assert '/direct-prompt-injection"' in html or "/direct-prompt-injection'" in html
+        assert '/direct-prompt-injection/guardrail-ladder' in html
+        assert 'const DPI_MODE = "baseline"' in html
+        assert 'id="dpi-baseline-wrap-ollama"' in html
         assert '>Baseline<' in html
         assert '>Guardrail ladder<' in html
+
+        guardrail = client.get('/direct-prompt-injection/guardrail-ladder')
+        assert guardrail.status_code == 200
+        guardrail_html = guardrail.data.decode()
+        assert 'const DPI_MODE = "escalation"' in guardrail_html
+        assert 'id="dpi-escalation-wrap-ollama"' in guardrail_html
 
     def test_indirect_prompt_injection_page(self, client):
         """Test indirect prompt injection page loads."""

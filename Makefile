@@ -15,7 +15,7 @@ COMPOSE_FILE    ?= docker-compose.yml
 COMPOSE_EXT     ?= docker-compose.external-ollama.yml
 WORKSHOP_COMPOSE ?= deploy/docker-compose.workshop.yml
 DEPLOY_DIR      ?= deploy
-PWNZZAI_IMAGE   ?= ghcr.io/maryammouzarani2024/pwnzzai:latest
+PWNZZAI_IMAGE   ?= ghcr.io/owasp/pwnzzai:latest
 LOCAL_IMAGE     ?= pwnzzai-local:dev
 TEST_IMAGE      ?= pwnzzai:test-ci
 APP_PORT        ?= 8080
@@ -137,13 +137,21 @@ test-docker-build: ## Build $(TEST_IMAGE) from Dockerfile for test runs
 	docker build -t "$(TEST_IMAGE)" .
 
 .PHONY: test-docker
-test-docker: test-docker-build ## Run pytest -v inside $(TEST_IMAGE) (installs requirements-test in container)
-	docker run --rm -t "$(TEST_IMAGE)" \
+test-docker: test-docker-build ## Run pytest -v inside $(TEST_IMAGE) (bind-mounts tests; image excludes tests/)
+	docker run --rm -t \
+		-v "$(CURDIR)/tests:/app/tests:ro" \
+		-v "$(CURDIR)/pytest.ini:/app/pytest.ini:ro" \
+		-v "$(CURDIR)/requirements-test.txt:/app/requirements-test.txt:ro" \
+		"$(TEST_IMAGE)" \
 		sh -lc 'python -m pip install -q -r requirements-test.txt && pytest -v'
 
 .PHONY: test-docker-cov
-test-docker-cov: test-docker-build ## pytest with coverage inside container
-	docker run --rm -t "$(TEST_IMAGE)" \
+test-docker-cov: test-docker-build ## pytest with coverage inside container (bind-mounts tests)
+	docker run --rm -t \
+		-v "$(CURDIR)/tests:/app/tests:ro" \
+		-v "$(CURDIR)/pytest.ini:/app/pytest.ini:ro" \
+		-v "$(CURDIR)/requirements-test.txt:/app/requirements-test.txt:ro" \
+		"$(TEST_IMAGE)" \
 		sh -lc 'python -m pip install -q -r requirements-test.txt && pytest --cov=application --cov-report=term-missing -v'
 
 # =============================================================================

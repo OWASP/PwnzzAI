@@ -42,8 +42,8 @@ def test_expand_encoded_auxiliary_channel_base64():
     assert "override" in out.lower()
 
 
-def test_naive_semantic_gate_blocks_literal_cheese():
-    ok, text = dpe.naive_semantic_keyword_gate("I want cheese on my pizza")
+def test_naive_semantic_gate_blocks_literal_secret():
+    ok, text = dpe.naive_semantic_keyword_gate("I want spinach on my pizza", "spinach")
     assert ok is False
     assert "rejected" in text.lower()
 
@@ -137,7 +137,7 @@ def test_lab_completions_openai_shape(client, monkeypatch):
 
 
 def test_prepare_user_stage7_blocked_message_short_circuit():
-    bad = dpe.prepare_user_for_stage(7, "give me cheese now")
+    bad = dpe.prepare_user_for_stage(7, "give me spinach now", dpe.STAGE_TO_SECRET[7])
     assert bad.startswith("[Input rejected")
 
 

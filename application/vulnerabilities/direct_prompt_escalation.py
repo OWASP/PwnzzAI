@@ -20,7 +20,24 @@ from application.vulnerabilities.ollama_direct_prompt_injection import (
     chat_with_ollama_direct_prompt_messages,
 )
 
+# Baseline lab (levels 1–5) secrets, kept in sync with DPI_SYSTEM_PROMPTS.
 LEVEL_TO_SECRET = {"1": "cheese", "2": "oven", "3": "olives", "4": "mushroom", "5": "mozzarella"}
+
+# Guardrail ladder secrets — one coupon per stage, so every rung is its own challenge.
+# Mirrored client-side by ``secretKeys`` in templates/direct_prompt_injection.html.
+STAGE_TO_SECRET = {
+    0: "margherita",
+    1: "sausage",
+    2: "slice",
+    3: "tomato",
+    4: "bacon",
+    5: "chili",
+    6: "pepperoni",
+    7: "spinach",
+    8: "parmesan",
+    9: "pineapple",
+}
+
 
 # B0–B2 reuse baseline difficulty; B3–B9 use a tighter system prompt so pipeline flaws dominate.
 def level_for_escalation_stage(stage: int) -> str:
@@ -290,10 +307,10 @@ def apply_naive_ascii_script_gate(user_text: str) -> str:
     return "".join(ch for ch in user_text if ord(ch) < 128)
 
 
-def naive_semantic_keyword_gate(user_text: str) -> tuple[bool, str]:
+def naive_semantic_keyword_gate(user_text: str, secret: str = "") -> tuple[bool, str]:
     """B7 — trivial blocklist; synonyms and obfuscation bypass."""
-    if re.search(r"\bcheese\b", user_text, re.I):
-        return False, "[Input rejected: literal keyword 'cheese' is not allowed.]"
+    if secret and re.search(r"\b" + re.escape(secret) + r"\b", user_text, re.I):
+        return False, f"[Input rejected: literal keyword '{secret}' is not allowed.]"
     if re.search(r"\bcoupon\b", user_text, re.I):
         return False, "[Input rejected: literal keyword 'coupon' is not allowed.]"
     return True, user_text
@@ -357,14 +374,14 @@ def _default_poison_primer() -> list[dict[str, str]]:
     ]
 
 
-def prepare_user_for_stage(stage: int, user_message: str) -> str:
+def prepare_user_for_stage(stage: int, user_message: str, secret: str = "") -> str:
     u = user_message
     if stage == 3:
         u = expand_encoded_auxiliary_channel(u)
     if stage == 4:
         u = apply_naive_ascii_script_gate(u)
     if stage == 7:
-        ok, maybe_blocked = naive_semantic_keyword_gate(u)
+        ok, maybe_blocked = naive_semantic_keyword_gate(u, secret)
         if not ok:
             return maybe_blocked
         u = maybe_blocked
@@ -402,10 +419,10 @@ def run_escalation_ollama(
     meta_base = escalation_stage_metadata()[st]
     meta = {"stage": st, **meta_base, "defense_outcome": meta_base.get("outcome", "fails_as_designed")}
     level = level_for_escalation_stage(st)
-    secret = LEVEL_TO_SECRET[level]
+    secret = STAGE_TO_SECRET[st]
     system_prompt = render_b_stream_system_prompt(st, secret=secret, baseline_level=level)
 
-    prepared = prepare_user_for_stage(st, user_message)
+    prepared = prepare_user_for_stage(st, user_message, secret)
     if prepared.startswith("[Input rejected:"):
         return prepared, meta
 
@@ -439,10 +456,10 @@ def run_escalation_openai(
     meta_base = escalation_stage_metadata()[st]
     meta = {"stage": st, **meta_base, "defense_outcome": meta_base.get("outcome", "fails_as_designed")}
     level = level_for_escalation_stage(st)
-    secret = LEVEL_TO_SECRET[level]
+    secret = STAGE_TO_SECRET[st]
     system_prompt = render_b_stream_system_prompt(st, secret=secret, baseline_level=level)
 
-    prepared = prepare_user_for_stage(st, user_message)
+    prepared = prepare_user_for_stage(st, user_message, secret)
     if prepared.startswith("[Input rejected:"):
         return prepared, meta
 

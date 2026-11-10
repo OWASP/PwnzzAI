@@ -29,8 +29,8 @@ services:
       - "${OLLAMA_PUBLISH:-0.0.0.0:11434}:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=-1
-    # GPU: requires NVIDIA Container Toolkit on the host (nvidia-smi on host).
-    gpus: all
+    # GPU is requested via docker-compose.workshop.nvidia.yml (merged by the scripts when
+    # nvidia-smi works or PWNZZAI_OLLAMA_GPU=1). Requires NVIDIA Container Toolkit on the host.
 
   # Restricted Docker API for CTFd. HAProxy matches /containers/*/start|stop before generic /containers,
   # so ALLOW_START / ALLOW_STOP must be enabled or container start returns 403 → plugin shows 500.

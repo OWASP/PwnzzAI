@@ -7,17 +7,19 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+# libzbar0: runtime for pyzbar (QR labs). Wheels cover numpy/sklearn/Pillow/faiss; no compiler.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libzbar0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip && \
-    pip install \
-    --retries 10 \
-    --timeout 600 \
-    -r requirements.txt
+# CPU torch first so sentence-transformers does not pull the CUDA wheel (~GB of nvidia-*).
+RUN python -m pip install --upgrade --no-cache-dir pip && \
+    pip install --no-cache-dir --retries 10 --timeout 600 \
+      torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --retries 10 --timeout 600 \
+      -r requirements.txt
 
 COPY . .
 
@@ -31,7 +33,9 @@ ENV PYTHONUNBUFFERED=1
 ARG SECRET_KEY=""
 ARG GEMINI_API_KEY=""
 ARG GOOGLE_API_KEY=""
-ARG GEMINI_MODEL="gemini-1.5-flash"
+# No default: a baked GEMINI_MODEL would route every lab to gemini/... even on an OpenAI-only setup.
+ARG GEMINI_MODEL=""
+ARG LITELLM_MODEL=""
 ARG MODEL_PROVIDER="auto"
 ARG OLLAMA_HOST="http://172.17.0.1:11434"
 ARG OLLAMA_MODEL="mistral:7b"
@@ -47,6 +51,7 @@ ENV SECRET_KEY=${SECRET_KEY}
 ENV GEMINI_API_KEY=${GEMINI_API_KEY}
 ENV GOOGLE_API_KEY=${GOOGLE_API_KEY}
 ENV GEMINI_MODEL=${GEMINI_MODEL}
+ENV LITELLM_MODEL=${LITELLM_MODEL}
 ENV MODEL_PROVIDER=${MODEL_PROVIDER}
 ENV OLLAMA_HOST=${OLLAMA_HOST}
 ENV OLLAMA_MODEL=${OLLAMA_MODEL}

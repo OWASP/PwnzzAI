@@ -292,3 +292,10 @@ class TestSupplyChainAPI:
         assert 'success' in data
         assert 'message' in data
         assert 'warning' in data
+
+    def test_demo_malicious_model_page(self, client):
+        """JS malicious model demo page loads after training the model."""
+        response = client.get('/demo-malicious-model')
+
+        assert response.status_code == 200
+        assert b'Error demonstrating malicious model' not in response.data

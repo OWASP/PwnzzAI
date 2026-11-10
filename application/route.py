@@ -713,6 +713,7 @@ def demo_malicious_model():
         # Create an instance of the model - this will trigger the malicious code in __init__
         # The model's __init__ method hooks into Flask's response system
         model = SentimentModel_JS_malicious()
+        model.train()
         print(model.get_model_info())
         
         # Return a simple page - the model will inject its JavaScript into the response
@@ -794,7 +795,12 @@ def data_poisoning_main():
 @application.app.route('/data-poisoning/catering-rag')
 def catering_rag_poisoning_page():
     """Corporate catering vector / RAG poisoning lab (LLM04-adjacent scenario)."""
-    return render_template('catering_rag_poisoning.html')
+    from application.vulnerabilities.catering_rag_lab import UNSAFE_HINT_TOKENS
+
+    return render_template(
+        'catering_rag_poisoning.html',
+        unsafe_hint_tokens=list(UNSAFE_HINT_TOKENS),
+    )
 
 
 @application.app.route('/agentic-tools')
@@ -2029,10 +2035,13 @@ def upload_qr():
     file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
     file.save(file_path)
     print(f"File saved to: {file_path}")  # Debug log
+    try:
+        qr_text = decode_qr(file_path)
+        print(f"QR decoded: {qr_text}")  # Debug log
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-    qr_text = decode_qr(file_path)
-    print(f"QR decoded: {qr_text}")  # Debug log
-    
     if not qr_text:
         return jsonify({"error": "No QR code detected"}), 400
 

@@ -45,6 +45,23 @@ def openai_model_bare() -> str:
     return _env_strip("OPENAI_MODEL")
 
 
+def _model_provider() -> str:
+    """MODEL_PROVIDER read at call time (the module constant is the import-time snapshot)."""
+    return os.environ.get("MODEL_PROVIDER", MODEL_PROVIDER).strip().lower()
+
+
+def _cloud_model_fallback(openai_value: str) -> str:
+    """
+    Choose between GEMINI_MODEL and OPENAI_MODEL when no explicit route is configured.
+    Gemini wins by default, but MODEL_PROVIDER=openai pins OpenAI so a baked-in or leftover
+    GEMINI_MODEL cannot route an OpenAI-only deployment to Google.
+    """
+    gem = gemini_litellm_route()
+    if openai_value and (_model_provider() == "openai" or not gem):
+        return openai_value
+    return gem or openai_value
+
+
 def _llm_ui_str(name: str) -> str:
     return os.environ.get(name, "").strip()
 
@@ -53,25 +70,21 @@ def lab_cloud_llm_model_default() -> str:
     """
     Model id for most cloud LLM lab demos (DPI, insecure plugin, RAG, DoS, order access, etc.).
     Resolution order: LAB_CLOUD_LLM_MODEL, then GEMINI_MODEL (as gemini/...), then OPENAI_MODEL
-    (bare; llm_chat prefixes openai/). No hardcoded default model in code.
+    (bare; llm_chat prefixes openai/). MODEL_PROVIDER=openai puts OPENAI_MODEL ahead of
+    GEMINI_MODEL. No hardcoded default model in code.
     """
     raw = _env_strip("LAB_CLOUD_LLM_MODEL")
     if raw:
         return raw
-    gem = gemini_litellm_route()
-    if gem:
-        return gem
-    oa = openai_model_bare()
-    if oa:
-        return oa
-    return ""
+    return _cloud_model_fallback(openai_model_bare())
 
 
 def lab_cloud_llm_model_excessive_agency() -> str:
     """
     Model id for the excessive-agency cloud demo only.
     Resolution order: LAB_CLOUD_LLM_MODEL_EXCESSIVE_AGENCY, LAB_CLOUD_LLM_MODEL,
-    GEMINI_MODEL route, OPENAI_MODEL bare. No hardcoded default in code.
+    GEMINI_MODEL route, OPENAI_MODEL bare (OpenAI first when MODEL_PROVIDER=openai).
+    No hardcoded default in code.
     """
     raw = _env_strip("LAB_CLOUD_LLM_MODEL_EXCESSIVE_AGENCY")
     if raw:
@@ -79,13 +92,7 @@ def lab_cloud_llm_model_excessive_agency() -> str:
     inherit = _env_strip("LAB_CLOUD_LLM_MODEL")
     if inherit:
         return inherit
-    gem = gemini_litellm_route()
-    if gem:
-        return gem
-    oa = openai_model_bare()
-    if oa:
-        return oa
-    return ""
+    return _cloud_model_fallback(openai_model_bare())
 
 
 def get_openai_api_key(session_obj) -> str:
@@ -105,18 +112,14 @@ def resolved_litellm_model() -> str:
     """
     LiteLLM route for Lab Setup UI and normalize_litellm_model fallback.
     Order: LITELLM_MODEL (full route), else GEMINI_MODEL → gemini/..., else OPENAI_MODEL → openai/...
+    MODEL_PROVIDER=openai moves OPENAI_MODEL ahead of GEMINI_MODEL.
     No default model id in code; returns \"\" if unset (configure via environment).
     """
     raw = _litellm_model_env()
     if raw:
         return raw
-    gem = gemini_litellm_route()
-    if gem:
-        return gem
     oa = openai_model_bare()
-    if oa:
-        return f"openai/{oa}"
-    return ""
+    return _cloud_model_fallback(f"openai/{oa}" if oa else "")
 
 
 def _litellm_route_prefix(model: str) -> str:

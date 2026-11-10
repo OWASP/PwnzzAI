@@ -153,6 +153,38 @@ def test_gemini_model_env_full_route_passthrough(monkeypatch):
     assert provider_config.gemini_litellm_route() == "gemini/gemini-3.1-flash-lite"
 
 
+def test_model_provider_openai_pins_openai_over_gemini(monkeypatch):
+    monkeypatch.delenv("LITELLM_MODEL", raising=False)
+    monkeypatch.delenv("LAB_CLOUD_LLM_MODEL", raising=False)
+    monkeypatch.delenv("LAB_CLOUD_LLM_MODEL_EXCESSIVE_AGENCY", raising=False)
+    monkeypatch.setenv("MODEL_PROVIDER", "openai")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
+    provider_config = _reload_provider_config()
+    assert provider_config.resolved_litellm_model() == "openai/gpt-4o-mini"
+    assert provider_config.api_response_model_type() == "openai"
+    assert provider_config.lab_cloud_llm_model_default() == "gpt-4o-mini"
+    assert provider_config.lab_cloud_llm_model_excessive_agency() == "gpt-4o-mini"
+    assert provider_config.llm_ui_snapshot()["provider_name"] == "OpenAI"
+
+
+def test_model_provider_openai_still_falls_back_to_gemini_without_openai_model(monkeypatch):
+    monkeypatch.delenv("LITELLM_MODEL", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setenv("MODEL_PROVIDER", "openai")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    provider_config = _reload_provider_config()
+    assert provider_config.resolved_litellm_model() == "gemini/gemini-3.1-flash-lite"
+
+
+def test_explicit_litellm_model_wins_over_model_provider(monkeypatch):
+    monkeypatch.setenv("MODEL_PROVIDER", "openai")
+    monkeypatch.setenv("LITELLM_MODEL", "gemini/gemini-3.1-flash-lite")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
+    provider_config = _reload_provider_config()
+    assert provider_config.resolved_litellm_model() == "gemini/gemini-3.1-flash-lite"
+
+
 def test_resolved_litellm_model_empty_when_unconfigured(monkeypatch):
     monkeypatch.delenv("LITELLM_MODEL", raising=False)
     monkeypatch.delenv("GEMINI_MODEL", raising=False)
