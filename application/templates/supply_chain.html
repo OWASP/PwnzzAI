@@ -203,6 +203,30 @@ class SentimentModel_bash_malicious:
                 </div>
                 </details>
 
+            <details class="description-dropdown" open>
+                <summary class="dropdown-title">Win Condition: Load-Time Deserialization</summary>
+                <div class="dropdown-content">
+                    <section class="section-box">
+                        <h2>Objective: make loading an untrusted model file execute code</h2>
+                        <p>The two demos above hide their payload in <code>__init__</code>, so it only fires when the <b>server constructs</b> the object &mdash; unpickling their saved <code>.pkl</code> files runs nothing. This exercise uses a model whose payload sits in <code>__reduce__</code>, the hook <code>pickle.load</code> / <code>torch.load</code> call while restoring a file. <b>Loading the file is enough to run it.</b></p>
+                        <p>The bundled payload is <b>benign on purpose</b>: it writes a marker file instead of running shell commands, so you can prove code executed without shipping a weaponised model. A real attacker returns <code>(os.system, ("&hellip;",))</code> from <code>__reduce__</code> &mdash; exactly the kind of global <a href="https://github.com/protectai/modelscan" target="_blank" rel="noopener noreferrer">ModelScan</a> / picklescan flag.</p>
+                        <ol>
+                            <li>Click <b>Save tampered model</b> to write <code>malicious_reduce_sentiment_model.pkl</code>.</li>
+                            <li>Leave <b>Hardened mode</b> off and click <b>Load model file</b>. The unsafe <code>pickle.load</code> runs the payload &rarr; <b>solved</b>.</li>
+                            <li>Turn <b>Hardened mode</b> on and load again. The restricted (weights-only style) loader refuses the payload &rarr; not solved. That is the fix.</li>
+                        </ol>
+                        <div class="live-demo">
+                            <button id="save-reduce-model" class="demo-btn secondary-btn">Save tampered model</button>
+                            <label style="margin-left: 15px;">
+                                <input type="checkbox" id="hardened-toggle"> Hardened mode (restricted / weights-only load)
+                            </label>
+                            <button id="load-saved-model" class="demo-btn">Load model file</button>
+                            <div id="reduce-demo-result" class="save-result"></div>
+                        </div>
+                    </section>
+                </div>
+            </details>
+
                     <details class="description-dropdown" >
                      <summary class="dropdown-title">Mitigation Strategies</summary>
                         <div class="dropdown-content">
@@ -378,6 +402,75 @@ class SentimentModel_bash_malicious:
                             <i class="fas fa-exclamation-circle"></i>
                             <strong>Error:</strong> Failed to save the model. Check console for details.
                         `;
+                    });
+                });
+            }
+        });
+    </script>
+
+    <script>
+        // Win-condition demo: save a __reduce__ model, then load it unsafe vs. hardened.
+        document.addEventListener('DOMContentLoaded', function () {
+            const resultDiv = document.getElementById('reduce-demo-result');
+
+            const saveBtn = document.getElementById('save-reduce-model');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    resultDiv.className = 'save-result loading';
+                    resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving tampered model...';
+                    fetch('/save-reduce-malicious-model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            resultDiv.className = 'save-result success';
+                            resultDiv.innerHTML = `<i class="fas fa-check-circle"></i> <strong>${data.message}</strong><br><strong>File:</strong> ${data.filename}<br><em>${data.scan_note}</em>`;
+                        } else {
+                            resultDiv.className = 'save-result error';
+                            resultDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>Error:</strong> ${data.error}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saving reduce model:', error);
+                        resultDiv.className = 'save-result error';
+                        resultDiv.innerHTML = 'Error saving the model. Check the console for details.';
+                    });
+                });
+            }
+
+            const loadBtn = document.getElementById('load-saved-model');
+            if (loadBtn) {
+                loadBtn.addEventListener('click', function () {
+                    const hardened = document.getElementById('hardened-toggle').checked;
+                    resultDiv.className = 'save-result loading';
+                    resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading model file...';
+                    fetch('/load-saved-model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hardened: hardened })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) {
+                            resultDiv.className = 'save-result error';
+                            resultDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>Error:</strong> ${data.error}`;
+                        } else if (data.solved) {
+                            resultDiv.className = 'save-result success';
+                            resultDiv.innerHTML = `<i class="fas fa-flag-checkered"></i> <strong>Solved &mdash; the untrusted file executed code on load.</strong><br>Loader: unsafe pickle.load<br><em>${data.detail}</em>`;
+                        } else if (data.hardened) {
+                            resultDiv.className = 'save-result';
+                            resultDiv.innerHTML = `<i class="fas fa-shield-alt"></i> <strong>Hardened load &mdash; payload blocked, not solved.</strong><br><em>${data.detail}</em>`;
+                        } else {
+                            resultDiv.className = 'save-result';
+                            resultDiv.innerHTML = `<em>${data.detail}</em>`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading saved model:', error);
+                        resultDiv.className = 'save-result error';
+                        resultDiv.innerHTML = 'Error loading the model. Check the console for details.';
                     });
                 });
             }
