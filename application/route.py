@@ -773,16 +773,36 @@ def save_bash_malicious_model():
     try:
         from application.vulnerabilities.supply_chain import save_bash_malicious_model
         result = save_bash_malicious_model()
-        
+
         if result['success']:
             return jsonify(result)
         else:
             return jsonify(result), 500
-            
+
     except Exception as e:
         return jsonify({
             'success': False,
             'error': f'Error saving bash model: {str(e)}'
+        }), 500
+
+
+@application.app.route('/load-saved-model', methods=['POST'])
+def load_saved_model_route():
+    """Load the saved bash model file and report whether its __reduce__ payload executed.
+
+    The file is written by /save-bash-malicious-model. Body: {"hardened": bool}.
+    hardened=false uses an unsafe pickle.load (payload runs -> solve); hardened=true
+    uses a restricted loader that refuses the payload.
+    """
+    try:
+        from application.vulnerabilities.supply_chain import load_saved_model
+        data = request.get_json(silent=True) or {}
+        result = load_saved_model(hardened=bool(data.get('hardened')))
+        return jsonify(result) if result.get('success') else (jsonify(result), 400)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error loading saved model: {str(e)}'
         }), 500
     
 @application.app.route('/data-poisoning')

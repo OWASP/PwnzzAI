@@ -287,3 +287,39 @@ class TestVulnerabilityHelpers:
             model_data = data_poisoning.create_new_model_with_poisoned_data(mixed_comments)
             assert 'vocabulary_size' in model_data
             assert model_data['vocabulary_size'] > 0
+
+
+class TestSupplyChainDeserialization:
+    """Tests for the load-time __reduce__ payload and its win condition."""
+
+    def test_evaluate_solve_matrix(self):
+        from application.vulnerabilities.supply_chain import evaluate_supply_chain_solve
+        # Solve only when the payload ran AND the unsafe loader was used.
+        assert evaluate_supply_chain_solve(payload_executed=True, hardened=False)['solved'] is True
+        assert evaluate_supply_chain_solve(payload_executed=True, hardened=True)['solved'] is False
+        assert evaluate_supply_chain_solve(payload_executed=False, hardened=False)['solved'] is False
+
+    def test_reduce_global_is_benign_marker(self):
+        """__reduce__ must carry the benign marker writer, never a shell gadget."""
+        from application.vulnerabilities import supply_chain as sc
+        # Build an instance without running __init__ (which would shell out).
+        obj = sc.SentimentModel_bash_malicious.__new__(sc.SentimentModel_bash_malicious)
+        obj.token = 'unit-reduce-check'
+        func, args = obj.__reduce__()
+        assert func is sc._record_load_proof
+        assert args == ('unit-reduce-check',)
+
+    def test_reduce_payload_fires_on_unsafe_load_only(self, test_app):
+        from application.vulnerabilities import supply_chain as sc
+        with test_app.app_context():
+            saved = sc.save_bash_malicious_model()
+            assert saved['success'] is True
+
+            unsafe = sc.load_saved_model(hardened=False)
+            assert unsafe['payload_executed'] is True
+            assert unsafe['solved'] is True
+
+            hardened = sc.load_saved_model(hardened=True)
+            assert hardened['payload_executed'] is False
+            assert hardened['blocked'] is True
+            assert hardened['solved'] is False

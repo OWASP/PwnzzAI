@@ -14,18 +14,17 @@
       CONTENT CORRECTIONS (PwnzzAI working group, Afshin):
       1. Removed dead JS block bound to #trigger-model / #vuln-demo-result (elements never existed).
          The XSS demo runs via the /demo-malicious-model link, not that handler.
-      2. Trigger timing, re-checked against the code: both payloads live in __init__ and fire when
-         the class is constructed. The XSS class has no __getattribute__ (earlier text and code
-         sample described one); the demo route never calls predict. Unpickling the saved .pkl
-         files runs nothing, because pickle does not call __init__ and the classes define no
-         __reduce__. Code samples now show the real classes.
+      2. Trigger timing, re-checked against the code: the XSS payload lives in __init__ and fires
+         when the class is constructed. The XSS class has no __getattribute__ (earlier text and code
+         sample described one); the demo route never calls predict. Code samples now show the real
+         classes.
       3. Fixed "launches a calculator app" -> actual commands (cat /etc/passwd, whoami, uname -a).
       4. Strengthened mitigations: weights_only=True, safetensors, picklescan/ModelScan in CI,
          model signing, internal registry, ML-BOM.
-      Open items raised separately as an issue (require backend/redesign, not content):
-        - neither demo deserializes an untrusted FILE (both instantiate server-side), and the
-          saved .pkl files are inert on load; a __reduce__ payload would make them realistic
-        - no win condition; no hardened toggle to show the fix neutralising the payload
+      5. Load-time win condition (issue #32 item 2): SentimentModel_bash_malicious now defines
+         __reduce__, so loading its saved .pkl executes code on load (benign marker, not a shell
+         gadget). The "Load saved file" button + "Hardened load" checkbox below show the unsafe
+         pickle.load solving vs. a restricted/weights-only loader blocking the payload.
     -->
 
     {% include 'navbar.html' %}
@@ -65,7 +64,7 @@
 
                            <p>At <b>PwnzzAI Shop</b>, we chose to focus on perfecting our pizzas and leaving AI model development to the experts. To analyze customer feedback, we have downloaded the following models from an external repository. Load them into memory, and as you already have access to the code you can inject other malicious routines to it. </p>
                            <p>The two demos below show <b>two different payloads</b> hidden in a tampered model class: the first injects JavaScript into the web page, the second runs operating system commands on the server. Both sit in the class's <code>__init__</code>, so both fire as soon as the server <b>constructs</b> the model, before any prediction is made. Both arrive through the same broken trust assumption: the model came from outside and was never verified.</p>
-                           <p><b>About the saved files:</b> the <b>Save Model</b> buttons pickle an already-constructed model. Loading those files back with <code>pickle.load</code> does <b>not</b> re-run the payload, because pickle restores the object's fields without calling <code>__init__</code>. A real attacker would add a <code>__reduce__</code> method so that loading the file executes code; scan the saved files with ModelScan to see how scanners judge them.</p>
+                           <p><b>About the saved files:</b> the <b>Save Model</b> buttons pickle an already-constructed model. For the JavaScript model, loading that file back with <code>pickle.load</code> does <b>not</b> re-run the payload, because pickle restores the object's fields without calling <code>__init__</code>. The OS command model additionally defines a <code>__reduce__</code> method, so loading <b>its</b> saved file executes code on load&mdash;the realistic supply-chain shape, demonstrated in its section below. Scan either file with ModelScan to see how scanners judge them.</p>
                         </div>
                         <img style="width: 220px; height: auto; max-width: 100%; flex-shrink: 0;" src="{{ url_for('static', filename='img/supply chain.png') }}" alt="Supply Chain Attack Diagram" class="demonstration-image">
                     </div>
@@ -128,8 +127,8 @@ class SentimentModel_JS_malicious:
                     </div>
                 </div>
 
-                <h2>OS Command Execution Example (payload fires on construction)</h2>
-                <p>This model executes operating system commands as soon as the object is constructed. In a real supply-chain attack the same code would sit in a <code>__reduce__</code> method, so that <code>pickle.load</code> / <code>torch.load</code> of a whole-object file runs it; here the server constructs the class directly, which reaches the same result:</p>
+                <h2>OS Command Execution Example (fires on construction <em>and</em> on load)</h2>
+                <p>This model executes operating system commands as soon as the object is constructed. It also defines a <code>__reduce__</code> method, so that <code>pickle.load</code> / <code>torch.load</code> of its saved file runs a payload too&mdash;you can trigger both below: construct it directly, or save it and load the file back.</p>
 
                 <div class="demo-section">
                     <div class="demo-code">
@@ -178,6 +177,7 @@ class SentimentModel_bash_malicious:
                             <li>Its <code>__init__</code> method contains code that executes shell commands</li>
                             <li>When the server creates the model, the commands run automatically&mdash;no inference call is needed</li>
                             <li>In this example it runs <code>cat /etc/passwd</code>, <code>whoami</code>, and <code>uname -a</code>, but it could execute any arbitrary command</li>
+                            <li>Its <code>__reduce__</code> method adds a second trigger: loading the saved <code>.pkl</code> runs a payload too (here a benign marker), so the file is dangerous even without constructing the class</li>
                         </ol>
 
                         <div class="live-demo">
@@ -191,6 +191,19 @@ class SentimentModel_bash_malicious:
                                 <p><i class="fas fa-info-circle"></i> This instantiates a model that executes system commands and displays the output below.</p>
                                 <div id="bash-save-result" class="save-result"></div>
                             </div>
+
+                            <h3>Load the Saved File (payload fires on load)</h3>
+                            <p>Because this class now defines <code>__reduce__</code>, the <code>.pkl</code> you just saved carries a load-time payload: loading it back executes code, no construction needed. The bundled payload is <b>benign on purpose</b>&mdash;it writes a marker file instead of running shell commands, so the saved artifact is safe to ship while still proving code ran on load. A real attacker returns <code>(os.system, ("&hellip;",))</code> from <code>__reduce__</code>, exactly the global <a href="https://github.com/protectai/modelscan" target="_blank" rel="noopener noreferrer">ModelScan</a> / picklescan flag.</p>
+                            <ol>
+                                <li>Click <b>Save Model</b> above to write <code>malicious_bash_sentiment_model.pkl</code>.</li>
+                                <li>Leave <b>Hardened load</b> off and click <b>Load saved file</b>: the unsafe <code>pickle.load</code> runs the payload &rarr; <b>solved</b>.</li>
+                                <li>Turn <b>Hardened load</b> on and load again: the restricted (weights-only style) loader refuses the payload &rarr; not solved. See the Mitigation section for why.</li>
+                            </ol>
+                            <label style="display: inline-block; margin: 8px 0;">
+                                <input type="checkbox" id="hardened-toggle"> Hardened load (restricted / weights-only, blocks the payload)
+                            </label><br>
+                            <button id="load-saved-model" class="demo-btn">Load saved file</button>
+                            <div id="reduce-demo-result" class="save-result"></div>
                         </div>
 
 
@@ -222,6 +235,7 @@ class SentimentModel_bash_malicious:
                         <p><b>Golden Rule:</b> Treat AI models as potentially untrusted code - always verify, isolate, and test.</p>
 
                         <h3>Secure Deserialization (the primary fix)</h3>
+                        <p>The <b>Hardened load</b> checkbox in the OS command demo shows this fix in action: with it on, a restricted (weights-only style) loader refuses the <code>__reduce__</code> global, so the payload never runs. In production that means:</p>
                             <ul>
                                 <li><strong>Prefer SafeTensors</strong> (.safetensors) over pickle/.pt/.pkl &mdash; a data-only format with no code execution path</li>
                                 <li><strong>Use <code>torch.load(path, weights_only=True)</code></strong> &mdash; restricts unpickling to tensors/plain types. This is the default from PyTorch 2.6; do not override it back to <code>False</code> for untrusted files</li>
@@ -378,6 +392,48 @@ class SentimentModel_bash_malicious:
                             <i class="fas fa-exclamation-circle"></i>
                             <strong>Error:</strong> Failed to save the model. Check console for details.
                         `;
+                    });
+                });
+            }
+        });
+    </script>
+
+    <script>
+        // Win-condition demo: load the saved bash model file, unsafe vs. hardened.
+        document.addEventListener('DOMContentLoaded', function () {
+            const resultDiv = document.getElementById('reduce-demo-result');
+
+            const loadBtn = document.getElementById('load-saved-model');
+            if (loadBtn) {
+                loadBtn.addEventListener('click', function () {
+                    const hardened = document.getElementById('hardened-toggle').checked;
+                    resultDiv.className = 'save-result loading';
+                    resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading model file...';
+                    fetch('/load-saved-model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hardened: hardened })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) {
+                            resultDiv.className = 'save-result error';
+                            resultDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>Error:</strong> ${data.error}`;
+                        } else if (data.solved) {
+                            resultDiv.className = 'save-result success';
+                            resultDiv.innerHTML = `<i class="fas fa-flag-checkered"></i> <strong>Solved &mdash; the untrusted file executed code on load.</strong><br>Loader: unsafe pickle.load<br><em>${data.detail}</em>`;
+                        } else if (data.hardened) {
+                            resultDiv.className = 'save-result';
+                            resultDiv.innerHTML = `<i class="fas fa-shield-alt"></i> <strong>Hardened load &mdash; payload blocked, not solved.</strong><br><em>${data.detail}</em>`;
+                        } else {
+                            resultDiv.className = 'save-result';
+                            resultDiv.innerHTML = `<em>${data.detail}</em>`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading saved model:', error);
+                        resultDiv.className = 'save-result error';
+                        resultDiv.innerHTML = 'Error loading the model. Check the console for details.';
                     });
                 });
             }
