@@ -786,26 +786,13 @@ def save_bash_malicious_model():
         }), 500
 
 
-@application.app.route('/save-reduce-malicious-model', methods=['POST'])
-def save_reduce_malicious_model():
-    """Save a tampered model whose __reduce__ payload fires when the file is loaded."""
-    try:
-        from application.vulnerabilities.supply_chain import save_reduce_malicious_model as save_reduce
-        result = save_reduce()
-        return jsonify(result) if result['success'] else (jsonify(result), 500)
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Error saving reduce model: {str(e)}'
-        }), 500
-
-
 @application.app.route('/load-saved-model', methods=['POST'])
 def load_saved_model_route():
-    """Load the saved tampered model file and report whether its payload executed.
+    """Load the saved bash model file and report whether its __reduce__ payload executed.
 
-    Body: {"hardened": bool}. hardened=false uses an unsafe pickle.load (payload runs
-    -> solve); hardened=true uses a restricted loader that refuses the payload.
+    The file is written by /save-bash-malicious-model. Body: {"hardened": bool}.
+    hardened=false uses an unsafe pickle.load (payload runs -> solve); hardened=true
+    uses a restricted loader that refuses the payload.
     """
     try:
         from application.vulnerabilities.supply_chain import load_saved_model

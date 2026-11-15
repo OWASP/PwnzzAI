@@ -173,7 +173,9 @@ class SentimentModel_bash_malicious:
         self.model = None
         self.vocab = None
         self.executed_commands = []
-                
+        # Token tying this instance to the marker its __reduce__ payload drops on load.
+        self.token = uuid.uuid4().hex
+
         # Execute multiple dangerous commands to demonstrate the attack
         commands_to_execute = [
             "cat /etc/passwd",
@@ -311,6 +313,21 @@ class SentimentModel_bash_malicious:
         vector = self.vectorizer.transform([text])
         return self.model.predict_proba(vector)[0]
 
+    def __reduce__(self):
+        """Load-time payload: unpickling this model runs attacker-controlled code.
+
+        The commands in __init__ only fire when the SERVER constructs the object.
+        __reduce__ is the hook pickle.load / torch.load call while restoring a FILE,
+        so merely loading the saved .pkl re-executes code -- the real supply-chain
+        shape. The payload is deliberately benign: it calls _record_load_proof, which
+        drops a marker file instead of running shell commands, so the saved artifact
+        is safe to ship while still proving code ran on load. A real attacker would
+        return (os.system, ("...",)) here -- exactly the global ModelScan / picklescan
+        flag, which is why the fix is to scan artifacts and load with a restricted
+        (weights-only) loader.
+        """
+        return (_record_load_proof, (self.token,))
+
 def save_js_malicious_model():
     """
     Create and save the JavaScript malicious model as a pickle file.
@@ -348,23 +365,21 @@ def save_bash_malicious_model():
     """
     try:
         model = SentimentModel_bash_malicious()
-        
-        # Create downloads directory if it doesn't exist
-        downloads_dir = os.path.join(os.getcwd(), 'downloads')
-        os.makedirs(downloads_dir, exist_ok=True)
-        
-        # Save the model as pickle
-        model_path = os.path.join(downloads_dir, 'malicious_bash_sentiment_model.pkl')
+
+        # Save the model as pickle. Because the class defines __reduce__, the saved
+        # file carries a load-time payload: loading it back re-executes code.
+        model_path = os.path.join(_downloads_dir(), BASH_MODEL_FILENAME)
         with open(model_path, 'wb') as f:
             pickle.dump(model, f)
-        
+
         return {
             'success': True,
             'message': 'Malicious bash model saved successfully',
             'file_path': model_path,
-            'filename': 'malicious_bash_sentiment_model.pkl',
+            'filename': BASH_MODEL_FILENAME,
+            'token': model.token,
             'commands_executed': model.executed_commands,
-            'scan_note': 'You can now scan this file with tools like ModelScan to detect malicious code!'
+            'scan_note': 'Scan this file with ModelScan / picklescan, or load it below to see the __reduce__ payload fire on load.'
         }
         
     except Exception as e:
@@ -375,24 +390,19 @@ def save_bash_malicious_model():
 
 
 # ---------------------------------------------------------------------------
-# Deserialization payload that fires on LOAD (issue #32, item 2)
+# Load-time deserialization win condition (issue #32, item 2)
 #
-# The two classes above hide their payload in __init__, so they only fire when
-# the SERVER constructs the object; unpickling the saved .pkl files runs nothing
-# (pickle restores fields without calling __init__). This section adds a model
-# whose payload is carried by __reduce__, so that pickle.load / torch.load of the
-# *untrusted file* executes it -- the real supply-chain shape the lab is about.
-#
-# The payload is deliberately benign: it writes a marker file (see
-# _record_load_proof) instead of running shell commands, so the lab can PROVE
-# that code executed on load, drive a win condition, and still be safe to ship.
-# A real attacker would return (os.system, ("...",)) from __reduce__; scanners
-# such as ModelScan / picklescan flag exactly that kind of global, which is why
-# the fix is to scan artifacts and to load with a restricted / weights-only loader.
+# SentimentModel_bash_malicious above carries a __reduce__ method, so unpickling
+# its saved .pkl re-executes code -- the real supply-chain shape (the JS/bash
+# payloads in __init__ only fire when the SERVER constructs the object; pickle
+# restores fields without calling __init__). The __reduce__ payload is benign:
+# it writes a marker file via _record_load_proof instead of running shell
+# commands, so the artifact is safe to ship while still proving code ran on load.
+# load_saved_model drives the win condition and the hardened-loader fix below.
 # ---------------------------------------------------------------------------
 
 LOAD_PROOF_PREFIX = '.load_proof_'
-REDUCE_MODEL_FILENAME = 'malicious_reduce_sentiment_model.pkl'
+BASH_MODEL_FILENAME = 'malicious_bash_sentiment_model.pkl'
 
 
 def _downloads_dir():
@@ -408,7 +418,7 @@ def _proof_path(token):
 def _record_load_proof(token):
     """Benign side effect proving that unpickling executed attacker-controlled code.
 
-    Referenced from SentimentModel_reduce_malicious.__reduce__, so pickle.load calls
+    Referenced from SentimentModel_bash_malicious.__reduce__, so pickle.load calls
     it while restoring the file. It only drops a marker file; nothing sensitive or
     destructive runs. Returns the marker path, which becomes the "restored object".
     """
@@ -416,49 +426,6 @@ def _record_load_proof(token):
     with open(path, 'w') as f:
         f.write(token)
     return path
-
-
-class SentimentModel_reduce_malicious:
-    """Tampered model whose payload fires when the FILE is unpickled, not on construct.
-
-    __reduce__ tells pickle.load / torch.load to call (_record_load_proof, (token,)).
-    __init__ itself is harmless and is NOT run on load, which is the whole point:
-    merely loading an untrusted model file is enough to execute code.
-    """
-
-    def __init__(self, token=None):
-        self.vectorizer = None
-        self.model = None
-        self.vocab = None
-        self.token = token or uuid.uuid4().hex
-
-    def __reduce__(self):
-        return (_record_load_proof, (self.token,))
-
-
-def save_reduce_malicious_model():
-    """Create and save a model file carrying a __reduce__ payload.
-
-    Unlike save_js/bash_malicious_model (which pickle an already-built object whose
-    __init__ payload does NOT survive the round-trip), this file re-executes its
-    payload every time it is loaded with an unsafe loader.
-    """
-    try:
-        token = uuid.uuid4().hex
-        model = SentimentModel_reduce_malicious(token=token)
-        model_path = os.path.join(_downloads_dir(), REDUCE_MODEL_FILENAME)
-        with open(model_path, 'wb') as f:
-            pickle.dump(model, f)
-        return {
-            'success': True,
-            'message': 'Tampered model saved. Loading it with an unsafe loader runs its __reduce__ payload.',
-            'file_path': model_path,
-            'filename': REDUCE_MODEL_FILENAME,
-            'token': token,
-            'scan_note': 'Scan this file with ModelScan / picklescan: the __reduce__ global is what they flag.',
-        }
-    except Exception as e:
-        return {'success': False, 'error': f'Error saving reduce model: {str(e)}'}
 
 
 # Globals a weights-only / data-only load may legitimately need. Anything else
@@ -509,15 +476,16 @@ def evaluate_supply_chain_solve(payload_executed, hardened):
 def load_saved_model(hardened=False):
     """Load the saved tampered model file and report whether its payload executed.
 
+    Loads the bash model's saved .pkl (SentimentModel_bash_malicious.__reduce__).
     hardened=False -> plain pickle.load (vulnerable): the __reduce__ payload runs.
     hardened=True  -> RestrictedUnpickler (fixed): the payload's global is refused,
                       so nothing executes.
     """
-    model_path = os.path.join(_downloads_dir(), REDUCE_MODEL_FILENAME)
+    model_path = os.path.join(_downloads_dir(), BASH_MODEL_FILENAME)
     if not os.path.exists(model_path):
         return {
             'success': False,
-            'error': 'No saved model file. Use "Save tampered model" first.',
+            'error': 'No saved model file. Use "Save Model" on the OS command demo first.',
         }
 
     with open(model_path, 'rb') as f:

@@ -299,26 +299,27 @@ class TestSupplyChainDeserialization:
         assert evaluate_supply_chain_solve(payload_executed=True, hardened=True)['solved'] is False
         assert evaluate_supply_chain_solve(payload_executed=False, hardened=False)['solved'] is False
 
-    def test_construction_does_not_fire_payload(self):
-        """Building the object must not run the payload; only loading the file does."""
+    def test_reduce_global_is_benign_marker(self):
+        """__reduce__ must carry the benign marker writer, never a shell gadget."""
         from application.vulnerabilities import supply_chain as sc
-        token = 'unit-construct-check'
-        marker = sc._proof_path(token)
-        if os.path.exists(marker):
-            os.remove(marker)
-        sc.SentimentModel_reduce_malicious(token=token)
-        assert not os.path.exists(marker)
+        # Build an instance without running __init__ (which would shell out).
+        obj = sc.SentimentModel_bash_malicious.__new__(sc.SentimentModel_bash_malicious)
+        obj.token = 'unit-reduce-check'
+        func, args = obj.__reduce__()
+        assert func is sc._record_load_proof
+        assert args == ('unit-reduce-check',)
 
-    def test_reduce_payload_fires_on_unsafe_load_only(self):
+    def test_reduce_payload_fires_on_unsafe_load_only(self, test_app):
         from application.vulnerabilities import supply_chain as sc
-        saved = sc.save_reduce_malicious_model()
-        assert saved['success'] is True
+        with test_app.app_context():
+            saved = sc.save_bash_malicious_model()
+            assert saved['success'] is True
 
-        unsafe = sc.load_saved_model(hardened=False)
-        assert unsafe['payload_executed'] is True
-        assert unsafe['solved'] is True
+            unsafe = sc.load_saved_model(hardened=False)
+            assert unsafe['payload_executed'] is True
+            assert unsafe['solved'] is True
 
-        hardened = sc.load_saved_model(hardened=True)
-        assert hardened['payload_executed'] is False
-        assert hardened['blocked'] is True
-        assert hardened['solved'] is False
+            hardened = sc.load_saved_model(hardened=True)
+            assert hardened['payload_executed'] is False
+            assert hardened['blocked'] is True
+            assert hardened['solved'] is False
