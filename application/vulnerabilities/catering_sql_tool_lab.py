@@ -446,6 +446,30 @@ def run_catering_sql_chat(
     else:
         assistant = _ollama_chat(messages, model)
         provider = "ollama"
+
+    # Transport/model errors (_ollama_chat / _cloud_chat return "Error: ...") are not a
+    # model turn: surface them as a structured error so the UI can point at Lab Setup
+    # instead of rendering the raw string as the assistant's reply. A 404 from Ollama
+    # means no model is pulled.
+    if assistant.startswith("Error:"):
+        level_info = defense_level_info(lv)
+        return {
+            "assistant": assistant,
+            "tool_outputs": [],
+            "generated_sql": [],
+            "combined_text": assistant,
+            "level": lv,
+            "level_name": level_info["name"],
+            "level_hint": level_info["hint"],
+            "hardened": hardened,
+            "provider": provider,
+            "model_error": True,
+            "model_missing": provider == "ollama" and "status 404" in assistant,
+            "solved": False,
+            "foreign_flags": [],
+            "flags_found": [],
+        }
+
     tool_outputs: list[str] = []
     generated_sql: list[str] = []
 

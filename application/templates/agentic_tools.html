@@ -28,8 +28,9 @@
       Open items raised separately as an issue (require backend/redesign, not content):
         - F1-F4 cannot be solved through the tools: no fragment passing the F1 filter matches "bob"
         - "Verify solve" can be passed without the tool path (details: issue #31)
-        - generated_sql, level_name and level_hint are returned but never shown in the UI
-        - a missing Ollama model surfaces as the chat reply "Error: Ollama status 404"
+      Fixed in the backend follow-up (issue #31 items 3-4):
+        - generated_sql is now rendered inline under each reply, labelled with the tier
+        - a missing/unreachable model now shows a Lab Setup prompt instead of the raw error
     #}
 
     {% include 'navbar.html' %}
@@ -56,8 +57,8 @@
                         </ul>
                         <p>The tool path leaks another user's token at F0. From F1 upward the filters reject every fragment that could match the other driver, so use those tiers to read the rejection messages and see what each control stops.</p>
                         <p><strong>Solve:</strong> get another user's routing token (format <code>RT-…</code>) to appear in the assistant's reply together with the tool output, then press <strong>Verify solve</strong>. You act as the user you are logged in as, or as <code>alice</code> when not logged in, so for <code>alice</code> the target is Bob's token.</p>
-                        <p><strong>Seeing the SQL.</strong> Each API response carries a <code>generated_sql</code> array with the queries that ran. The chat does not display it; open your browser's developer tools, go to the Network tab, and inspect the response of <code>/api/catering-sql/chat</code>.</p>
-                        <p><strong>Model notes.</strong> The Free Model tab needs a local model pulled from <a href="{{ url_for('basics') }}">Lab Setup</a>; without one the assistant replies <code>Error: Ollama status 404</code>. The default small model (<code>llama3.2:1b</code>) often writes a raw <code>SELECT</code> statement or a malformed tool line, which the server ignores. Ask it to output only the tool line, retry, or use a larger model such as <code>mistral:7b</code>.</p>
+                        <p><strong>Seeing the SQL.</strong> Each reply shows the queries that actually ran in an <em>Executed SQL</em> panel beneath it, labelled with the active defense tier. (The same <code>generated_sql</code> array is still in the <code>/api/catering-sql/chat</code> response if you prefer the Network tab.)</p>
+                        <p><strong>Model notes.</strong> The Free Model tab needs a local model pulled from <a href="{{ url_for('basics') }}">Lab Setup</a>; without one the chat shows a setup prompt linking there instead of a raw error. The default small model (<code>llama3.2:1b</code>) often writes a raw <code>SELECT</code> statement or a malformed tool line, which the server ignores. Ask it to output only the tool line, retry, or use a larger model such as <code>mistral:7b</code>.</p>
                         <p>This lab maps to two OWASP Top 10 for LLM risks: <strong>LLM05: Improper Output Handling</strong>, because model text is executed as tool calls without checking it against what the user may do, and <strong>LLM06: Excessive Agency</strong>, because the tool can read every user's data while acting for one user. See <strong>Mitigation Strategies</strong> for a tenant-scoped tool path you can enable to compare behavior after defenses.</p>
                         <p>The <strong>vector / RAG poisoning</strong> counterpart for the same fictional catering org is on
                             <a href="{{ url_for('catering_rag_poisoning_page') }}">Data and Model Poisoning → RAG poisoning lab</a>.</p>
@@ -184,6 +185,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const LLM_UI_DEFAULT = {{ llm_ui | tojson }};
+            const LAB_SETUP_URL = {{ url_for('basics') | tojson }};
             const SQL_CHAT_OPENER = 'Routing desk: you are on catering operations. Ask about a driver\'s routing token — the assistant answers by emitting tool lines such as RUN_ROUTE_LOOKUP("…"), which the server runs.';
 
             const state = {
@@ -217,6 +219,52 @@
                 d.className = 'message bot-message';
                 d.style.whiteSpace = 'pre-wrap';
                 d.textContent = text;
+                container.appendChild(d);
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function addSqlPanel(container, j) {
+                if (!j.generated_sql || !j.generated_sql.length) return;
+                const details = document.createElement('details');
+                details.open = true;
+                details.style.cssText = 'margin:4px 0 10px;border-left:3px solid #d08a2b;background:rgba(0,0,0,0.04);border-radius:4px;';
+                const summary = document.createElement('summary');
+                const tier = j.level_name || (j.level != null ? ('F' + j.level) : '');
+                summary.textContent = 'Executed SQL' + (tier ? ' — ' + tier : '');
+                summary.style.cssText = 'cursor:pointer;padding:6px 10px;font-weight:600;font-size:0.85em;';
+                details.appendChild(summary);
+                const pre = document.createElement('pre');
+                pre.textContent = j.generated_sql.join('\n');
+                pre.style.cssText = 'margin:0;padding:8px 10px;white-space:pre-wrap;overflow-x:auto;font-family:monospace;font-size:0.82em;';
+                details.appendChild(pre);
+                if (j.level_hint) {
+                    const hint = document.createElement('div');
+                    hint.textContent = j.level_hint;
+                    hint.style.cssText = 'padding:6px 10px;font-size:0.8em;opacity:0.8;border-top:1px solid rgba(0,0,0,0.08);';
+                    details.appendChild(hint);
+                }
+                container.appendChild(details);
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function addModelErrorBanner(container, j) {
+                const d = document.createElement('div');
+                d.className = 'message bot-message';
+                d.style.cssText = 'border-left:3px solid #c0392b;background:rgba(192,57,43,0.08);';
+                if (j.model_missing) {
+                    d.innerHTML = '<i class="fas fa-triangle-exclamation"></i> <strong>No local model is available.</strong> ' +
+                        'The Free Model tab needs a model pulled from Ollama. Open <a href="' + LAB_SETUP_URL + '">Lab Setup</a> ' +
+                        'and pull <code>llama3.2:1b</code> (or a larger model such as <code>mistral:7b</code>), then try again.';
+                } else {
+                    d.innerHTML = '<i class="fas fa-triangle-exclamation"></i> <strong>The model could not be reached.</strong> ' +
+                        'Check <a href="' + LAB_SETUP_URL + '">Lab Setup</a> for the Free Model or API key setup.';
+                    if (j.assistant) {
+                        const detail = document.createElement('div');
+                        detail.textContent = String(j.assistant);
+                        detail.style.cssText = 'margin-top:6px;font-size:0.8em;opacity:0.75;font-family:monospace;';
+                        d.appendChild(detail);
+                    }
+                }
                 container.appendChild(d);
                 container.scrollTop = container.scrollHeight;
             }
@@ -315,14 +363,20 @@
                     const j = await r.json();
                     messagesEl.querySelector('.thinking-message')?.remove();
                     s.lastResponse = j;
-                    const answer = assistantDisplay(j);
-                    addBotBubble(messagesEl, answer || '(empty reply)');
-                    const combinedForHistory = j.combined_text != null ? String(j.combined_text) : answer;
-                    s.apiHistory = [
-                        ...historyPayload,
-                        { role: 'user', content: msg },
-                        { role: 'assistant', content: combinedForHistory },
-                    ];
+                    if (j.model_error) {
+                        // Transport/model error: show a setup prompt and keep it out of history.
+                        addModelErrorBanner(messagesEl, j);
+                    } else {
+                        const answer = assistantDisplay(j);
+                        addBotBubble(messagesEl, answer || '(empty reply)');
+                        addSqlPanel(messagesEl, j);
+                        const combinedForHistory = j.combined_text != null ? String(j.combined_text) : answer;
+                        s.apiHistory = [
+                            ...historyPayload,
+                            { role: 'user', content: msg },
+                            { role: 'assistant', content: combinedForHistory },
+                        ];
+                    }
                 } catch (e) {
                     messagesEl.querySelector('.thinking-message')?.remove();
                     s.lastResponse = null;

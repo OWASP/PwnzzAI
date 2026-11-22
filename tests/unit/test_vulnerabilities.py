@@ -287,3 +287,27 @@ class TestVulnerabilityHelpers:
             model_data = data_poisoning.create_new_model_with_poisoned_data(mixed_comments)
             assert 'vocabulary_size' in model_data
             assert model_data['vocabulary_size'] > 0
+
+
+class TestAgenticToolsModelError:
+    """Transport/model errors are surfaced as a structured error, not a chat reply."""
+
+    def test_missing_ollama_model_flagged(self, monkeypatch):
+        from application.vulnerabilities import catering_sql_tool_lab as lab
+        monkeypatch.setattr(lab, '_ollama_chat', lambda messages, model: 'Error: Ollama status 404')
+        out = lab.run_catering_sql_chat(
+            "find bob's token", level=0, hardened=False, attacker_username='alice'
+        )
+        assert out['model_error'] is True
+        assert out['model_missing'] is True
+        assert out['solved'] is False
+        assert out['generated_sql'] == []
+
+    def test_generic_model_error_not_flagged_missing(self, monkeypatch):
+        from application.vulnerabilities import catering_sql_tool_lab as lab
+        monkeypatch.setattr(lab, '_ollama_chat', lambda messages, model: 'Error: timeout')
+        out = lab.run_catering_sql_chat(
+            'hi', level=0, hardened=False, attacker_username='alice'
+        )
+        assert out['model_error'] is True
+        assert out['model_missing'] is False
